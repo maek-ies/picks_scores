@@ -236,7 +236,7 @@ function NFLScoresTracker() {
           transformedPicks[pick.name].push({
             gameId: pick.game_id,
             pick: pick.picked,
-            confidence: pick.confidence
+            confidence: parseInt(pick.confidence) || 0
           });
         });
         setMockPicks(transformedPicks);
@@ -515,11 +515,11 @@ function NFLScoresTracker() {
                         ))
                       )
                     ),
-                          React.createElement("tbody", null,
-                            (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
-                              const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
-                              return (
-                                React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${isGameOfTheWeek ? 'bg-purple-900/30' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
+                                      React.createElement("tbody", null,
+                                        (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
+                                          const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
+                                          return (
+                                            React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${isGameOfTheWeek ? 'border-red-500 border-2' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-white text-sm font-medium" },
                                 `${game.away} @ ${game.home}`
                               )
