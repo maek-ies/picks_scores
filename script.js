@@ -604,7 +604,8 @@ function NFLScoresTracker() {
                               React.createElement("div", { className: "text-sm" },
                                 game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
                                   React.createElement("span", { className: "text-white font-semibold" }, 
-                                    `${game.awayScore}-${game.homeScore}`
+                                    `${game.awayScore}-${game.homeScore}`,
+                                    (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && ` (Q${game.period} - ${game.displayClock})`
                                   )
                                 ) : (
                                   React.createElement("span", { className: "text-slate-400" }, "-")
