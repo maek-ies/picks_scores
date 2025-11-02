@@ -262,6 +262,7 @@ function NFLScoresTracker() {
             const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
             const summaryData = await summaryResponse.json();
             console.log(`Summary data for game ${game.id}:`, summaryData);
+            console.log(`Game ${game.id} status: ${game.status}`);
 
             let homeWinProbability = null;
             let awayWinProbability = null;
@@ -290,13 +291,14 @@ function NFLScoresTracker() {
         });
         const gamesWithWinProbabilities = await Promise.all(gameSummaryPromises);
 
-        const updatedWeeks = allWeeks.map(weekData => {
-          if (weekData.week === (selectedWeek || allWeeks[allWeeks.length - 1].week)) {
-            return { ...weekData, games: gamesWithWinProbabilities };
-          }
-          return weekData;
+        setWeeks(prevWeeks => {
+          return prevWeeks.map(weekData => {
+            if (weekData.week === (selectedWeek || allWeeks[allWeeks.length - 1].week)) {
+              return { ...weekData, games: gamesWithWinProbabilities };
+            }
+            return weekData;
+          });
         });
-        setWeeks(updatedWeeks);
 
         // When using live data, we still need mock picks
         const picksResponse = await fetch('data/picks.json').then(res => res.json());
