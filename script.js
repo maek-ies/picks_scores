@@ -125,16 +125,18 @@ function ChartTable({ confidenceResults }) {
             React.createElement("table", { className: "w-full" },
                 React.createElement("thead", null,
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Player"),
-                        weeks.map(week => React.createElement("th", { key: week, className: "px-4 py-3 text-center text-white font-semibold text-sm" }, `Week ${week}`))
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Week"),
+                        players.map(player => React.createElement("th", { key: player, className: "px-4 py-3 text-center text-white font-semibold text-sm" }, player))
                     )
                 ),
                 React.createElement("tbody", null,
-                    players.map(player => (
-                        React.createElement("tr", { key: player, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
-                            React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, player),
-                            confidenceResults[player].pointsPerWeek.map(d => (
-                                React.createElement("td", { key: d.week, className: "px-4 py-3 text-center text-slate-300" }, d.points)
+                    weeks.map(week => (
+                        React.createElement("tr", { key: week, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                            React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, `Week ${week}`),
+                            players.map(player => (
+                                React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, 
+                                    confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0
+                                )
                             ))
                         )
                     ))
@@ -153,7 +155,7 @@ function NFLScoresTracker() {
   const [activeTab, setActiveTab] = useState('confidence');
   const [confidenceView, setConfidenceView] = useState('overview');
   const [includeLiveGames, setIncludeLiveGames] = useState(false);
-  const [useMockData, setUseMockData] = useState(true);
+  const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
 
   const transformEspnData = (data) => {
