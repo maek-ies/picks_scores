@@ -34,16 +34,60 @@ function NFLScoresTracker() {
   const [activeTab, setActiveTab] = useState('confidence');
   const [confidenceView, setConfidenceView] = useState('overview');
   const [includeLiveGames, setIncludeLiveGames] = useState(false);
+  const [useMockData, setUseMockData] = useState(true);
+
+  const transformEspnData = (data) => {
+    return data.events.map(event => {
+      const competition = event.competitions[0];
+      const homeTeam = competition.competitors.find(t => t.homeAway === 'home');
+      const awayTeam = competition.competitors.find(t => t.homeAway === 'away');
+      return {
+        id: event.id,
+        date: event.date,
+        home: homeTeam.team.abbreviation,
+        away: awayTeam.team.abbreviation,
+        status: event.status.type.state,
+        winner: event.status.type.state === 'post' ? (parseInt(homeTeam.score) > parseInt(awayTeam.score) ? homeTeam.team.abbreviation : awayTeam.team.abbreviation) : null,
+        homeScore: parseInt(homeTeam.score),
+        awayScore: parseInt(awayTeam.score),
+      };
+    });
+  };
+
+  const fetchScores = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (useMockData) {
+        const allWeeks = window.weeks || [];
+        setWeeks(allWeeks);
+        if (allWeeks.length > 0 && !selectedWeek) {
+          setSelectedWeek(allWeeks[allWeeks.length - 1].week);
+        }
+      } else {
+        const weekPromises = Array.from({ length: 9 }, (_, i) => i + 1).map(weekNum =>
+          fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNum}`)
+            .then(res => res.json())
+            .then(data => ({ week: weekNum, games: transformEspnData(data) }))
+        );
+        const allWeeks = await Promise.all(weekPromises);
+        setWeeks(allWeeks);
+        if (allWeeks.length > 0 && !selectedWeek) {
+          setSelectedWeek(allWeeks[allWeeks.length - 1].week);
+        }
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("Unable to fetch live data from ESPN. Please try again or use mock data.");
+    } finally {
+      setLoading(false);
+      setLastUpdate(new Date());
+    }
+  };
 
   useEffect(() => {
-    const allWeeks = window.weeks || [];
-    setWeeks(allWeeks);
-    if (allWeeks.length > 0) {
-      setSelectedWeek(allWeeks[allWeeks.length - 1].week);
-    }
-    setLoading(false);
-    setLastUpdate(new Date());
-  }, []);
+    fetchScores();
+  }, [useMockData]);
 
   const calculateConfidencePoints = () => {
     const results = {};
@@ -60,8 +104,8 @@ function NFLScoresTracker() {
           const pick = playerPicks.find(p => p.gameId === game.id);
           if (!pick) return;
 
-          const isComplete = game.status === 'final';
-          const isLiveGame = game.status === 'live';
+          const isComplete = game.status === 'post';
+          const isLiveGame = game.status === 'in';
 
           results[player].possible += pick.confidence;
 
@@ -102,13 +146,13 @@ function NFLScoresTracker() {
   };
 
   const getGameStatus = (game) => {
-    if (game.status === 'final') return 'FINAL';
-    if (game.status === 'live') return 'LIVE';
+    if (game.status === 'post') return 'FINAL';
+    if (game.status === 'in') return 'LIVE';
     return 'Scheduled';
   };
 
   const isLive = (game) => {
-    return game.status === 'live';
+    return game.status === 'in';
   };
 
   const displayedWeek = weeks.find(w => w.week === selectedWeek);
@@ -145,6 +189,13 @@ function NFLScoresTracker() {
               )
             ),
             React.createElement("div", { className: "flex gap-2" },
+              React.createElement("button", { onClick: () => setUseMockData(!useMockData), className: `px-3 py-2 text-sm rounded-lg transition-colors ${
+                  useMockData 
+                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                }` },
+                useMockData ? "Using Mock Data" : "Using Live Data"
+              ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
               )
@@ -255,7 +306,7 @@ function NFLScoresTracker() {
                             ),
                             React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-sm" },
-                                game.status === 'final' || (includeLiveGames && game.status === 'live') ? (
+                                game.status === 'post' || (includeLiveGames && game.status === 'in') ? (
                                   React.createElement("span", { className: "text-white font-semibold" }, `${game.awayScore}-${game.homeScore}`)
                                 ) : (
                                   React.createElement("span", { className: "text-slate-400" }, "-")
