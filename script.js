@@ -186,7 +186,7 @@ function NFLScoresTracker() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeTab, setActiveTab] = useState('confidence');
   const [confidenceView, setConfidenceView] = useState('overview');
-  const [includeLiveGames, setIncludeLiveGames] = useState(false);
+  const [includeLiveGames, setIncludeLiveGames] = useState(true);
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
@@ -541,6 +541,7 @@ function NFLScoresTracker() {
                       React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
                         leaderboard.map(([player, data]) => (
                           React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700" },
                             React.createElement("div", { className: "text-white font-semibold text-sm" }, player),
@@ -566,14 +567,21 @@ function NFLScoresTracker() {
                               React.createElement("div", { className: "text-sm" },
                                 game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
                                   React.createElement("span", { className: "text-white font-semibold" }, 
-                                    `${game.awayScore}-${game.homeScore}`,
-                                    game.homeWinProbability && game.awayWinProbability && (
-                                      React.createElement("span", { className: "text-slate-400 text-xs ml-2" }, `(H: ${game.homeWinProbability.toFixed(1)}% A: ${game.awayWinProbability.toFixed(1)}%)`)
-                                    )
+                                    `${game.awayScore}-${game.homeScore}`
                                   )
                                 ) : (
                                   React.createElement("span", { className: "text-slate-400" }, "-")
                                 )
+                              )
+                            ),
+                            React.createElement("td", { className: "px-4 py-3" },
+                              game.homeWinProbability && game.awayWinProbability ? (
+                                React.createElement("div", { className: "text-sm" },
+                                  React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
+                                  React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
+                                )
+                              ) : (
+                                React.createElement("span", { className: "text-slate-400" }, "-")
                               )
                             ),
                             leaderboard.map(([player, data]) => {
