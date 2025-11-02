@@ -449,25 +449,6 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
     return results;
   };
 
-  const calculateCumulativePoints = (confidenceResults) => {
-    if (!confidenceResults || Object.keys(confidenceResults).length === 0) {
-      return {};
-    }
-    const cumulativeResults = {};
-    Object.keys(confidenceResults).forEach(player => {
-      let cumulativePoints = 0;
-      cumulativeResults[player] = {
-        pointsPerWeek: confidenceResults[player].pointsPerWeek.map(weekData => {
-          cumulativePoints += weekData.points;
-          return { week: weekData.week, points: cumulativePoints };
-        })
-      };
-    });
-    return cumulativeResults;
-  };
-
-  const cumulativeConfidenceResults = React.useMemo(() => calculateCumulativePoints(confidenceResults), [confidenceResults]);
-
   const getGameStatus = (game) => {
     if (game.status === 'final' || game.status === 'post') return 'FINAL';
     if (game.status === 'in' || game.status === 'live') return 'LIVE';
@@ -558,16 +539,6 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
               }`
             },
               "By Week Stats"
-            ),
-            React.createElement("button", {
-              onClick: () => setActiveTab('total'),
-              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'total'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-              }`
-            },
-              "Total"
             )
           )
         )
