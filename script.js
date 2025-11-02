@@ -269,6 +269,7 @@ function NFLScoresTracker() {
 
             if (summaryData.winprobability && summaryData.winprobability.length > 0) {
               const winProbabilities = summaryData.winprobability;
+
               if (game.status === 'post') {
                 homeWinProbability = winProbabilities[0].homeWinPercentage;
                 awayWinProbability = 100 - winProbabilities[0].homeWinPercentage;
@@ -588,6 +589,7 @@ function NFLScoresTracker() {
                                       React.createElement("tbody", null,
                                         (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
                                           const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
+                                          console.log('Game object in overview table:', game);
                                           return (
                                             React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },                            React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
@@ -609,7 +611,7 @@ function NFLScoresTracker() {
                               )
                             ),
                             React.createElement("td", { className: "px-4 py-3" },
-                              game.homeWinProbability !== null && game.awayWinProbability !== null ? (
+                              game.homeWinProbability !== null && game.awayWinProbability !== null && isLive(game) ? (
                                 React.createElement("div", { className: "text-sm" },
                                   React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
                                   React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
@@ -723,7 +725,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.away),
-                              game.awayWinProbability && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
+                              game.awayWinProbability && isLive(game) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.awayScore)
                           ),
@@ -731,7 +733,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.home),
-                              game.homeWinProbability && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
+                              game.homeWinProbability && isLive(game) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.homeScore)
                           )
