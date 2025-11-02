@@ -117,8 +117,35 @@ function Chart({ confidenceResults }) {
 }
 
 function ChartTable({ confidenceResults }) {
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+
+    const sortedWeeks = React.useMemo(() => {
+        let sortableWeeks = [...weeks];
+        if (sortConfig.key !== null) {
+            sortableWeeks.sort((a, b) => {
+                const aPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === a)?.points || 0;
+                const bPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === b)?.points || 0;
+                if (aPoints < bPoints) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aPoints > bPoints) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableWeeks;
+    }, [weeks, sortConfig, confidenceResults]);
+
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
 
     return (
         React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
@@ -126,11 +153,16 @@ function ChartTable({ confidenceResults }) {
                 React.createElement("thead", null,
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Week"),
-                        players.map(player => React.createElement("th", { key: player, className: "px-4 py-3 text-center text-white font-semibold text-sm" }, player))
+                        players.map(player => 
+                            React.createElement("th", { key: player, className: "px-4 py-3 text-center text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort(player) }, 
+                                player,
+                                sortConfig.key === player && (sortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
+                            )
+                        )
                     )
                 ),
                 React.createElement("tbody", null,
-                    weeks.map(week => (
+                    sortedWeeks.map(week => (
                         React.createElement("tr", { key: week, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
                             React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, `Week ${week}`),
                             players.map(player => (
@@ -484,7 +516,7 @@ function NFLScoresTracker() {
                       )
                     ),
                     React.createElement("tbody", null,
-                      (displayedWeek ? displayedWeek.games : []).map((game) => {
+                      (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
                         return (
                           React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
                             React.createElement("td", { className: "px-4 py-3" },
