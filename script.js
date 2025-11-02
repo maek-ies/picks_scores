@@ -448,6 +448,9 @@ function NFLScoresTracker() {
   };
 
   const calculateCumulativePoints = (confidenceResults) => {
+    if (!confidenceResults || Object.keys(confidenceResults).length === 0) {
+      return {};
+    }
     const cumulativeResults = {};
     Object.keys(confidenceResults).forEach(player => {
       let cumulativePoints = 0;
