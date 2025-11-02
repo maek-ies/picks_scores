@@ -260,6 +260,7 @@ function NFLScoresTracker() {
           try {
             const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
             const summaryData = await summaryResponse.json();
+            console.log(`Summary data for game ${game.id}:`, summaryData);
 
             let homeWinProbability = null;
             let awayWinProbability = null;
@@ -278,6 +279,7 @@ function NFLScoresTracker() {
               homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection;
               awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection;
             }
+            console.log(`Game ${game.id} Win Probabilities: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
             return { ...game, homeWinProbability, awayWinProbability };
           } catch (summaryError) {
@@ -604,13 +606,13 @@ function NFLScoresTracker() {
                               )
                             ),
                             React.createElement("td", { className: "px-4 py-3" },
-                              game.homeWinProbability && game.awayWinProbability ? (
+                              game.homeWinProbability !== null && game.awayWinProbability !== null ? (
                                 React.createElement("div", { className: "text-sm" },
                                   React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
                                   React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
                                 )
                               ) : (
-                                React.createElement("span", { className: "text-slate-400" }, "-")
+                                React.createElement("span", { className: "text-slate-400" }, "N/A")
                               )
                             ),
                             leaderboard.map(([player, data]) => {
