@@ -256,52 +256,53 @@ function NFLScoresTracker() {
           setSelectedWeek(allWeeks[allWeeks.length - 1].week);
         }
 
-        // Fetch win probabilities for the selected week's games
-        const currentWeekGames = allWeeks.find(w => w.week === (selectedWeek || allWeeks[allWeeks.length - 1].week))?.games || [];
-        const gameSummaryPromises = currentWeekGames.map(async (game) => {
-          try {
-            console.log(`Fetching summary for game ID: ${game.id}`);
-            const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
-            const summaryData = await summaryResponse.json();
-            console.log(`Summary data for game ${game.id}:`, summaryData);
-            console.log(`Game ${game.id} status: ${game.status}`);
+        // Fetch win probabilities for all games across all weeks
+        const allGamesWithSummaryPromises = allWeeks.flatMap(weekData =>
+          weekData.games.map(async (game) => {
+            try {
+              console.log(`Fetching summary for game ID: ${game.id}`);
+              const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
+              const summaryData = await summaryResponse.json();
+              console.log(`Summary data for game ${game.id}:`, summaryData);
+              console.log(`Game ${game.id} status: ${game.status}`);
 
-            let homeWinProbability = null;
-            let awayWinProbability = null;
+              let homeWinProbability = null;
+              let awayWinProbability = null;
 
-            if (summaryData.winprobability && summaryData.winprobability.length > 0) {
-              const winProbabilities = summaryData.winprobability;
+              if (summaryData.winprobability && summaryData.winprobability.length > 0) {
+                const winProbabilities = summaryData.winprobability;
 
-              if (game.status === 'post') {
-                homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
-                awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
-              } else if (game.status === 'in' || game.status === 'live') {
-                const latestWinProbability = winProbabilities[winProbabilities.length - 1];
-                homeWinProbability = latestWinProbability.homeWinPercentage * 100;
-                awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
+                if (game.status === 'post') {
+                  homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
+                  awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
+                } else if (game.status === 'in' || game.status === 'live') {
+                  const latestWinProbability = winProbabilities[winProbabilities.length - 1];
+                  homeWinProbability = latestWinProbability.homeWinPercentage * 100;
+                  awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
+                }
+              } else if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
+                homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection * 100;
+                awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection * 100;
               }
-            } else if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
-              homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection * 100;
-              awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection * 100;
-            }
-            console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
+              console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
-            return { ...game, homeWinProbability, awayWinProbability };
-          } catch (summaryError) {
-            console.error(`Error fetching summary for game ${game.id}:`, summaryError);
-            return game; // Return original game if summary fetch fails
-          }
-        });
-        const gamesWithWinProbabilities = await Promise.all(gameSummaryPromises);
-
-        setWeeks(prevWeeks => {
-          return prevWeeks.map(weekData => {
-            if (weekData.week === (selectedWeek || allWeeks[allWeeks.length - 1].week)) {
-              return { ...weekData, games: gamesWithWinProbabilities };
+              return { ...game, homeWinProbability, awayWinProbability, displayClock: summaryData.boxscore?.general?.displayClock, period: summaryData.boxscore?.general?.period };
+            } catch (summaryError) {
+              console.error(`Error fetching summary for game ${game.id}:`, summaryError);
+              return game; // Return original game if summary fetch fails
             }
-            return weekData;
-          });
-        });
+          })
+        );
+        const allGamesWithSummaries = await Promise.all(allGamesWithSummaryPromises);
+
+        const updatedWeeks = allWeeks.map(weekData => ({
+          ...weekData,
+          games: weekData.games.map(game => {
+            const summaryGame = allGamesWithSummaries.find(sg => sg.id === game.id);
+            return summaryGame || game;
+          })
+        }));
+        setWeeks(updatedWeeks);
 
         // When using live data, we still need mock picks
         const picksResponse = await fetch('data/picks.json').then(res => res.json());
