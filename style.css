@@ -1,0 +1,40 @@
+body {
+    font-family: sans-serif;
+    margin: 2em;
+}
+
+h1 {
+    text-align: center;
+}
+
+.options {
+    margin-bottom: 1em;
+    text-align: center;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 0.5em;
+    text-align: center;
+}
+
+thead th {
+    background-color: #f2f2f2;
+}
+
+.winner {
+    font-weight: bold;
+}
+
+.correct-pick {
+    background-color: #d4edda;
+}
+
+.incorrect-pick {
+    background-color: #f8d7da;
+}
