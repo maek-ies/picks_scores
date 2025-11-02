@@ -565,7 +565,12 @@ function NFLScoresTracker() {
                             React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-sm" },
                                 game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
-                                  React.createElement("span", { className: "text-white font-semibold" }, `${game.awayScore}-${game.homeScore}`)
+                                  React.createElement("span", { className: "text-white font-semibold" }, 
+                                    `${game.awayScore}-${game.homeScore}`,
+                                    game.homeWinProbability && game.awayWinProbability && (
+                                      React.createElement("span", { className: "text-slate-400 text-xs ml-2" }, `(H: ${game.homeWinProbability.toFixed(1)}% A: ${game.awayWinProbability.toFixed(1)}%)`)
+                                    )
+                                  )
                                 ) : (
                                   React.createElement("span", { className: "text-slate-400" }, "-")
                                 )
