@@ -214,7 +214,7 @@ function NFLScoresTracker() {
     setError(null);
     try {
       const gamesOfTheWeekResponse = await fetch('data/games_of_the_week.txt').then(res => res.text());
-      const gamesOfTheWeekIds = gamesOfTheWeekResponse.split(",").map(id => parseInt(id.trim()));
+      const gamesOfTheWeekIds = gamesOfTheWeekResponse.split(",").map(id => parseInt(id.trim())).filter(id => !isNaN(id));
       setGamesOfTheWeek(gamesOfTheWeekIds);
 
       if (useMockData) {
