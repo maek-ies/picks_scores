@@ -178,6 +178,97 @@ function ChartTable({ confidenceResults }) {
     );
 }
 
+function CumulativeChart({ cumulativeConfidenceResults }) {
+  const [activePoint, setActivePoint] = useState(null);
+  const players = Object.keys(cumulativeConfidenceResults);
+  const weeks = cumulativeConfidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = Math.max(1, ...Object.values(cumulativeConfidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
+
+  const chartWidth = 800;
+  const chartHeight = 400;
+  const padding = 50;
+
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+  const handleMouseMove = (e) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    players.forEach((player, playerIndex) => {
+      cumulativeConfidenceResults[player].pointsPerWeek.forEach(d => {
+        const pointX = xScale(d.week);
+        const pointY = yScale(d.points);
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+
+        if (distance < minDistance && distance < 20) {
+          minDistance = distance;
+          closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+        }
+      });
+    });
+
+    setActivePoint(closestPoint);
+  };
+
+  const handleMouseLeave = () => {
+    setActivePoint(null);
+  };
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points per Week"),
+      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
+        // X-axis
+        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        weeks.map(week => (
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+        )),
+
+        // Y-axis
+        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        Array.from({ length: 5 }).map((_, i) => {
+          const points = Math.round(maxPoints / 4 * i);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+        }),
+
+        // Lines
+        players.map((player, playerIndex) => (
+          React.createElement("polyline", {
+            key: player,
+            fill: "none",
+            stroke: colors[playerIndex % colors.length],
+            strokeWidth: 2,
+            points: cumulativeConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
+          })
+        )),
+
+        // Active point
+        activePoint && React.createElement("g", null,
+          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
+          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
+        ),
+
+        // Legend
+        players.map((player, playerIndex) => (
+          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
+            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+          )
+        ))
+      )
+    )
+  );
+}
+
 function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(undefined);
@@ -281,7 +372,7 @@ function NFLScoresTracker() {
 
     const intervalId = setInterval(() => {
       fetchScores(); // Fetch every minute
-    }, 60 * 1000); // 1 minute
+    }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [useMockData]); // Re-run if useMockData changes
@@ -355,6 +446,22 @@ function NFLScoresTracker() {
 
     return results;
   };
+
+  const calculateCumulativePoints = (confidenceResults) => {
+    const cumulativeResults = {};
+    Object.keys(confidenceResults).forEach(player => {
+      let cumulativePoints = 0;
+      cumulativeResults[player] = {
+        pointsPerWeek: confidenceResults[player].pointsPerWeek.map(weekData => {
+          cumulativePoints += weekData.points;
+          return { week: weekData.week, points: cumulativePoints };
+        })
+      };
+    });
+    return cumulativeResults;
+  };
+
+  const cumulativeConfidenceResults = React.useMemo(() => calculateCumulativePoints(confidenceResults), [confidenceResults]);
 
   const getGameStatus = (game) => {
     if (game.status === 'final' || game.status === 'post') return 'FINAL';
@@ -445,7 +552,17 @@ function NFLScoresTracker() {
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              "Chart"
+              "By Week Stats"
+            ),
+            React.createElement("button", {
+              onClick: () => setActiveTab('total'),
+              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'total'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`
+            },
+              "Total"
             )
           )
         )
@@ -467,6 +584,10 @@ function NFLScoresTracker() {
           React.createElement("div", null, 
             React.createElement(Chart, { confidenceResults: confidenceResults }),
             React.createElement(ChartTable, { confidenceResults: confidenceResults })
+          )
+        ) : activeTab === 'total' ? (
+          React.createElement("div", null, 
+            React.createElement(CumulativeChart, { cumulativeConfidenceResults: cumulativeConfidenceResults })
           )
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
