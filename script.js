@@ -616,7 +616,8 @@ function NFLScoresTracker() {
                           React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700" },
                             React.createElement("div", { className: "text-white font-semibold text-sm" }, player),
                             React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
-                            React.createElement("div", { className: "text-slate-400 text-xs" }, `This Week: ${data.weekly}`)
+                            React.createElement("div", { className: "text-slate-400 text-xs" }, `This Week: ${data.weekly}`),
+                            React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
                           )
                         ))
                       )
@@ -643,7 +644,7 @@ function NFLScoresTracker() {
                                       React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
                                   )
                                 ) : (
-                                  game.status === 'scheduled' && game.date ? (
+                                  getGameStatus(game) === 'Scheduled' && game.date ? (
                                     React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
                                   ) : (
                                     React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
