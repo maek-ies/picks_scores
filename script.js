@@ -340,7 +340,7 @@ function NFLScoresTracker() {
     const results = {};
 
     Object.keys(mockPicks).forEach(player => {
-      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [] };
+      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0 };
     });
 
     weeks.forEach(weekData => {
@@ -357,6 +357,7 @@ function NFLScoresTracker() {
 
           const isComplete = game.status === 'final' || game.status === 'post';
           const isLiveGame = game.status === 'in' || game.status === 'live';
+          const isScheduled = game.status === 'scheduled';
 
           let confidence = pick.confidence;
           if (gamesOfTheWeek.includes(game.id) && (isComplete || isLiveGame)) {
@@ -364,6 +365,10 @@ function NFLScoresTracker() {
           }
 
           if(weekData.week === 1) results[player].possible += confidence;
+
+          if (isComplete || isLiveGame) {
+            results[player].totalConfidenceFromPlayedGames += confidence;
+          }
 
           let winner = null;
           if (isComplete) {
@@ -414,6 +419,28 @@ function NFLScoresTracker() {
         results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player] });
       });
     });
+
+    // Calculate remainingPossible based on the new logic
+    if (selectedWeek) {
+      const selectedWeekData = weeks.find(w => w.week === selectedWeek);
+      if (selectedWeekData) {
+        Object.keys(mockPicks).forEach(player => {
+          let maxPossibleConfidenceForWeek = 0;
+          selectedWeekData.games.forEach(game => {
+            const playerPicks = mockPicks[player];
+            const pick = playerPicks.find(p => p.gameId === game.id);
+            if (pick) {
+              let confidence = pick.confidence;
+              if (gamesOfTheWeek.includes(game.id)) {
+                confidence += 5;
+              }
+              maxPossibleConfidenceForWeek += confidence;
+            }
+          });
+          results[player].remainingPossible = maxPossibleConfidenceForWeek - results[player].totalConfidenceFromPlayedGames;
+        });
+      }
+    }
 
     return results;
   };
@@ -683,7 +710,8 @@ function NFLScoresTracker() {
                           React.createElement("div", { className: "text-right" },
                             React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
                             pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
-                            React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`)
+                            React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`),
+                            React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
                           )
                         )
                       );
