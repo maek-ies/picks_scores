@@ -424,20 +424,11 @@ function NFLScoresTracker() {
     if (selectedWeek) {
       const selectedWeekData = weeks.find(w => w.week === selectedWeek);
       if (selectedWeekData) {
+        const numberOfGamesInWeek = selectedWeekData.games.length;
+        const maxPossiblePointsForWeek = (numberOfGamesInWeek / 2) * (1 + numberOfGamesInWeek) + 5; // New formula
+
         Object.keys(mockPicks).forEach(player => {
-          let maxPossibleConfidenceForWeek = 0;
-          selectedWeekData.games.forEach(game => {
-            const playerPicks = mockPicks[player];
-            const pick = playerPicks.find(p => p.gameId === game.id);
-            if (pick) {
-              let confidence = pick.confidence;
-              if (gamesOfTheWeek.includes(game.id)) {
-                confidence += 5;
-              }
-              maxPossibleConfidenceForWeek += confidence;
-            }
-          });
-          results[player].remainingPossible = maxPossibleConfidenceForWeek - results[player].totalConfidenceFromPlayedGames;
+          results[player].remainingPossible = maxPossiblePointsForWeek - results[player].totalConfidenceFromPlayedGames;
         });
       }
     }
@@ -636,7 +627,11 @@ function NFLScoresTracker() {
                                       React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
                                   )
                                 ) : (
-                                  React.createElement("span", { className: "text-slate-400" }, "-")
+                                  game.status === 'scheduled' && game.date ? (
+                                    React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
+                                  ) : (
+                                    React.createElement("span", { className: "text-slate-400" }, "-")
+                                  )
                                 )
                               )
                             ),
