@@ -273,7 +273,8 @@ function NFLScoresTracker() {
               const winProbabilities = summaryData.winprobability;
 
               if (game.status === 'post') {
-                // No win probability computation for finished games
+                homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
+                awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
               } else if (game.status === 'in' || game.status === 'live') {
                 const latestWinProbability = winProbabilities[winProbabilities.length - 1];
                 homeWinProbability = latestWinProbability.homeWinPercentage * 100;
@@ -653,7 +654,7 @@ function NFLScoresTracker() {
                               )
                             ),
                             React.createElement("td", { className: "px-4 py-3" },
-                              game.homeWinProbability !== null && game.awayWinProbability !== null && isLive(game) ? (
+                              game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
                                 React.createElement("div", { className: "text-sm" },
                                   React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
                                   React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
@@ -770,7 +771,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.away),
-                              game.awayWinProbability && isLive(game) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
+                              game.awayWinProbability && (isLive(game) || (game.status === 'final' || game.status === 'post')) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.awayScore)
                           ),
@@ -778,7 +779,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.home),
-                              game.homeWinProbability && isLive(game) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
+                              game.homeWinProbability && (isLive(game) || (game.status === 'final' || game.status === 'post')) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.homeScore)
                           )
