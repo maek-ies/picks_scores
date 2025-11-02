@@ -561,7 +561,7 @@ function NFLScoresTracker() {
                 onClick: () => setIncludeLiveGames(!includeLiveGames),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
                   includeLiveGames
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
                 }`
               },
@@ -719,7 +719,8 @@ function NFLScoresTracker() {
                         }` },
                           live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
                           status,
-                          live && game.displayClock && game.period && React.createElement("span", null, `Q${game.period} - ${game.displayClock}`),
+                          live && game.displayClock && game.period && React.createElement("span", null, `Q${game.period} - ${game.displayClock.split(' - ')[0]}`),
+                          !live && status === 'Scheduled' && game.date && React.createElement("span", null, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })),
                           isGameOfTheWeek && (
                             React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
                           )
