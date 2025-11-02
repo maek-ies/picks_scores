@@ -435,7 +435,7 @@ function NFLScoresTracker() {
             if (pick) {
               const isComplete = game.status === 'final' || game.status === 'post';
               const isLiveGame = game.status === 'in' || game.status === 'live';
-              if (isComplete || isLiveGame) {
+              if (isComplete || (includeLiveGames && isLiveGame)) {
                 let confidence = pick.confidence;
                 if (gamesOfTheWeek.includes(game.id)) {
                   confidence += 5;
