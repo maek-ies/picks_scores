@@ -35,12 +35,7 @@ function Chart({ confidenceResults }) {
   const chartHeight = 400;
   const padding = 50;
 
-  const xScale = (week) => {
-    if (weeks.length <= 1) {
-      return padding + (chartWidth - 2 * padding) / 2; // Center the point if only one week or no weeks
-    }
-    return padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
-  };
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
   const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
@@ -183,95 +178,7 @@ function ChartTable({ confidenceResults }) {
     );
 }
 
-function CumulativeChart({ cumulativeConfidenceResults }) {
-  const [activePoint, setActivePoint] = useState(null);
-  const players = Object.keys(cumulativeConfidenceResults);
-  const xScale = (week, chartWidth, padding) => {
-    if (weeks.length <= 1) {
-      return padding + (chartWidth - 2 * padding) / 2; // Center the point if only one week or no weeks
-    }
-    return padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
-  };
-  const yScale = (points, chartHeight, padding, maxPoints) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
-
-  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
-
-  const handleMouseMove = (e) => {
-    const svgRect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - svgRect.left;
-    const y = e.clientY - svgRect.top;
-
-    let closestPoint = null;
-    let minDistance = Infinity;
-
-    players.forEach((player, playerIndex) => {
-      cumulativeConfidenceResults[player].pointsPerWeek.forEach(d => {
-        const pointX = xScale(d.week, chartWidth, padding);
-        const pointY = yScale(d.points, chartHeight, padding, maxPoints);
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-
-        if (distance < minDistance && distance < 20) {
-          minDistance = distance;
-          closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
-        }
-      });
-    });
-
-    setActivePoint(closestPoint);
-  };
-
-  const handleMouseLeave = () => {
-    setActivePoint(null);
-  };
-
-  return (
-    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
-      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points per Week"),
-      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
-        // X-axis
-        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
-        weeks.map(week => (
-          React.createElement("text", { key: week, x: xScale(week, chartWidth, padding), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
-        )),
-
-        // Y-axis
-        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
-        Array.from({ length: 5 }).map((_, i) => {
-          const points = Math.round(maxPoints / 4 * i);
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points, chartHeight, padding, maxPoints), fill: "#94a3b8", textAnchor: "end" }, points);
-        }),
-
-        // Lines
-        players.map((player, playerIndex) => (
-          React.createElement("polyline", {
-            key: player,
-            fill: "none",
-            stroke: colors[playerIndex % colors.length],
-            strokeWidth: 2,
-            points: cumulativeConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week, chartWidth, padding)},${yScale(d.points, chartHeight, padding, maxPoints)}`).join(' ')
-          })
-        )),
-
-        // Active point
-        activePoint && React.createElement("g", null,
-          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
-          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
-        ),
-
-        // Legend
-        players.map((player, playerIndex) => (
-          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
-            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
-            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
-          )
-        ))
-      )
-    )
-  );
-}
-
+function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(undefined);
   const [loading, setLoading] = useState(true);
@@ -374,7 +281,7 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
 
     const intervalId = setInterval(() => {
       fetchScores(); // Fetch every minute
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 60 * 1000); // 1 minute
 
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [useMockData]); // Re-run if useMockData changes
@@ -538,7 +445,7 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              "By Week Stats"
+              "Chart"
             )
           )
         )
@@ -560,10 +467,6 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
           React.createElement("div", null, 
             React.createElement(Chart, { confidenceResults: confidenceResults }),
             React.createElement(ChartTable, { confidenceResults: confidenceResults })
-          )
-        ) : activeTab === 'total' ? (
-          React.createElement("div", null, 
-            React.createElement(CumulativeChart, { cumulativeConfidenceResults: cumulativeConfidenceResults })
           )
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
@@ -698,8 +601,7 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
                         ),
                         React.createElement("div", { className: "text-right" },
                           React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
-                          React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`),
-                          idx > 0 && React.createElement("div", { className: "text-xs text-slate-400" }, `Diff: ${leaderboard[0][1].total - data.total}`)
+                          React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`)
                         )
                       )
                     ))
@@ -721,7 +623,6 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
                     const live = isLive(game);
                     const status = getGameStatus(game);
                     const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
-                    const gameTime = game.date ? new Date(game.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
 
                     return (
                       React.createElement("div",
@@ -735,9 +636,8 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
                         }` },
                           live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
                           status,
-                          gameTime && `, ${gameTime}`,
                           isGameOfTheWeek && (
-                            React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
+                            React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
                           )
                         ),
                         React.createElement("div", { className: "p-3" },
