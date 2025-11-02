@@ -200,9 +200,13 @@ function NFLScoresTracker() {
       let homeWinProbability = null;
       let awayWinProbability = null;
 
-      if (event.winprobability && event.winprobability.length > 0) {
+      if (event.status.type.state === 'post' && event.winprobability && event.winprobability.length > 0) {
         homeWinProbability = event.winprobability[0].homeWinPercentage;
         awayWinProbability = 100 - event.winprobability[0].homeWinPercentage;
+      } else if ((event.status.type.state === 'in' || event.status.type.state === 'live') && event.winprobability && event.winprobability.length > 0) {
+        const latestWinProbability = event.winprobability[event.winprobability.length - 1];
+        homeWinProbability = latestWinProbability.homeWinPercentage;
+        awayWinProbability = 100 - latestWinProbability.homeWinPercentage;
       } else if (event.predictor && event.predictor.homeTeam && event.predictor.awayTeam) {
         homeWinProbability = event.predictor.homeTeam.gameProjection;
         awayWinProbability = event.predictor.awayTeam.gameProjection;
