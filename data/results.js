@@ -6,14 +6,18 @@ window.mockResults = {
             "home": "Kansas City Chiefs",
             "away": "Denver Broncos",
             "status": "final",
-            "winner": "Kansas City Chiefs"
+            "winner": "Kansas City Chiefs",
+            "homeScore": 27,
+            "awayScore": 23
         },
         {
             "id": "2",
             "home": "Green Bay Packers",
             "away": "Detroit Lions",
             "status": "final",
-            "winner": "Detroit Lions"
+            "winner": "Detroit Lions",
+            "homeScore": 20,
+            "awayScore": 34
         },
         {
             "id": "3",
