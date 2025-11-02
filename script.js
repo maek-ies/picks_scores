@@ -265,8 +265,8 @@ function NFLScoresTracker() {
             let homeWinProbability = null;
             let awayWinProbability = null;
 
-            if (summaryData.boxscore && summaryData.boxscore.winprobability && summaryData.boxscore.winprobability.length > 0) {
-              const winProbabilities = summaryData.boxscore.winprobability;
+            if (summaryData.winprobability && summaryData.winprobability.length > 0) {
+              const winProbabilities = summaryData.winprobability;
               if (game.status === 'post') {
                 homeWinProbability = winProbabilities[0].homeWinPercentage;
                 awayWinProbability = 100 - winProbabilities[0].homeWinPercentage;
