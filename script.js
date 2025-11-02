@@ -286,7 +286,7 @@ function NFLScoresTracker() {
               }
               console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
-              return { ...game, homeWinProbability, awayWinProbability, displayClock: summaryData.boxscore?.general?.displayClock, period: summaryData.boxscore?.general?.period };
+              return { ...game, homeWinProbability, awayWinProbability };
             } catch (summaryError) {
               console.error(`Error fetching summary for game ${game.id}:`, summaryError);
               return game; // Return original game if summary fetch fails
