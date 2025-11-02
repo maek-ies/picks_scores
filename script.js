@@ -271,9 +271,7 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
     )
   );
 }
-}
 
-function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(undefined);
   const [loading, setLoading] = useState(true);
