@@ -196,6 +196,18 @@ function NFLScoresTracker() {
       const competition = event.competitions[0];
       const homeTeam = competition.competitors.find(t => t.homeAway === 'home');
       const awayTeam = competition.competitors.find(t => t.homeAway === 'away');
+
+      let homeWinProbability = null;
+      let awayWinProbability = null;
+
+      if (event.winprobability && event.winprobability.length > 0) {
+        homeWinProbability = event.winprobability[0].homeWinPercentage;
+        awayWinProbability = 100 - event.winprobability[0].homeWinPercentage;
+      } else if (event.predictor && event.predictor.homeTeam && event.predictor.awayTeam) {
+        homeWinProbability = event.predictor.homeTeam.gameProjection;
+        awayWinProbability = event.predictor.awayTeam.gameProjection;
+      }
+
       return {
         id: parseInt(event.id),
         date: event.date,
@@ -205,6 +217,8 @@ function NFLScoresTracker() {
         winner: event.status.type.state === 'post' ? (parseInt(homeTeam.score) > parseInt(awayTeam.score) ? homeTeam.team.abbreviation : awayTeam.team.abbreviation) : null,
         homeScore: parseInt(homeTeam.score),
         awayScore: parseInt(awayTeam.score),
+        homeWinProbability: homeWinProbability,
+        awayWinProbability: awayWinProbability,
       };
     });
   };
@@ -316,8 +330,20 @@ function NFLScoresTracker() {
           if(weekData.week === 1) results[player].possible += confidence;
 
           let winner = null;
-          if (isComplete || (includeLiveGames && isLiveGame)) {
+          if (isComplete) {
             winner = game.winner;
+          } else if (includeLiveGames && isLiveGame) {
+            if (game.homeScore > game.awayScore) {
+              winner = game.home;
+            } else if (game.awayScore > game.homeScore) {
+              winner = game.away;
+            } else if (game.homeWinProbability !== null && game.awayWinProbability !== null) {
+              if (game.homeWinProbability > game.awayWinProbability) {
+                winner = game.home;
+              } else if (game.awayWinProbability > game.homeWinProbability) {
+                winner = game.away;
+              }
+            }
           }
 
           const pickAbbreviation = teamAbbreviations[pick.pick] || pick.pick;
@@ -650,6 +676,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.away),
+                              game.awayWinProbability && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.awayScore)
                           ),
@@ -657,6 +684,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.home),
+                              game.homeWinProbability && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.homeScore)
                           )
