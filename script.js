@@ -428,24 +428,19 @@ function NFLScoresTracker() {
       console.log('Debug: selectedWeek', selectedWeek);
       console.log('Debug: selectedWeekData', selectedWeekData);
       if (selectedWeekData) {
+        const numberOfGamesInWeek = selectedWeekData.games.length;
+        const maxPossiblePointsForWeek = (numberOfGamesInWeek / 2) * (1 + numberOfGamesInWeek) + 5; // Global for the week
+
         Object.keys(mockPicks).forEach(player => {
           let totalConfidenceFromPlayedGamesForSelectedWeek = 0;
-          let maxPossibleConfidenceForPlayerInWeek = 0; // New variable for player-specific max possible
           selectedWeekData.games.forEach(game => {
             const playerPicks = mockPicks[player];
             const pick = playerPicks.find(p => p.gameId === game.id);
             if (pick) {
-              let confidence = Number(pick.confidence) || 0;
-              // Calculate max possible confidence for this game if a pick exists
-              let gameConfidenceForMax = confidence;
-              if (gamesOfTheWeek.includes(game.id)) {
-                gameConfidenceForMax += 5;
-              }
-              maxPossibleConfidenceForPlayerInWeek += gameConfidenceForMax;
-
               const isComplete = game.status === 'final' || game.status === 'post';
               const isLiveGame = game.status === 'in' || game.status === 'live';
               if (isComplete || (includeLiveGames && isLiveGame)) {
+                let confidence = Number(pick.confidence) || 0;
                 if (gamesOfTheWeek.includes(game.id)) {
                   confidence += 5;
                 }
@@ -453,7 +448,7 @@ function NFLScoresTracker() {
               }
             }
           });
-          results[player].remainingPossible = maxPossibleConfidenceForPlayerInWeek - totalConfidenceFromPlayedGamesForSelectedWeek;
+          results[player].remainingPossible = maxPossiblePointsForWeek - totalConfidenceFromPlayedGamesForSelectedWeek;
         });
       }
     }
