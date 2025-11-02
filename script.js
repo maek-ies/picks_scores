@@ -29,7 +29,7 @@ function Chart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
+  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
 
   const chartWidth = 800;
   const chartHeight = 400;
@@ -180,7 +180,7 @@ function ChartTable({ confidenceResults }) {
 
 function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
-  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -515,11 +515,11 @@ function NFLScoresTracker() {
                         ))
                       )
                     ),
-                    React.createElement("tbody", null,
-                      (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
-                        return (
-                          React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
-                            React.createElement("td", { className: "px-4 py-3" },
+                          React.createElement("tbody", null,
+                            (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
+                              const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
+                              return (
+                                React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${isGameOfTheWeek ? 'bg-purple-900/30' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-white text-sm font-medium" },
                                 `${game.away} @ ${game.home}`
                               )
