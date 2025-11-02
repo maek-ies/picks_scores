@@ -35,7 +35,12 @@ function Chart({ confidenceResults }) {
   const chartHeight = 400;
   const padding = 50;
 
-  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const xScale = (week) => {
+    if (weeks.length <= 1) {
+      return padding + (chartWidth - 2 * padding) / 2; // Center the point if only one week or no weeks
+    }
+    return padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  };
   const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
@@ -181,14 +186,12 @@ function ChartTable({ confidenceResults }) {
 function CumulativeChart({ cumulativeConfidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(cumulativeConfidenceResults);
-  const weeks = cumulativeConfidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(cumulativeConfidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
-
-  const chartWidth = 800;
-  const chartHeight = 400;
-  const padding = 50;
-
-  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const xScale = (week) => {
+    if (weeks.length <= 1) {
+      return chartWidth / 2; // Center the point if only one week or no weeks
+    }
+    return padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  };
   const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
@@ -747,6 +750,7 @@ function NFLScoresTracker() {
                     const live = isLive(game);
                     const status = getGameStatus(game);
                     const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
+                    const gameTime = game.date ? new Date(game.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
 
                     return (
                       React.createElement("div",
@@ -760,8 +764,9 @@ function NFLScoresTracker() {
                         }` },
                           live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
                           status,
+                          gameTime && `, ${gameTime}`,
                           isGameOfTheWeek && (
-                            React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
+                            React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
                           )
                         ),
                         React.createElement("div", { className: "p-3" },
