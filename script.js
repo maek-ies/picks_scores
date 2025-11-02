@@ -586,25 +586,30 @@ function NFLScoresTracker() {
                     "Leaderboard"
                   ),
                   React.createElement("div", { className: "space-y-2" },
-                    leaderboard.map(([player, data], idx) => (
-                      React.createElement("div", { key: player, className: "flex items-center justify-between bg-slate-700/30 rounded-lg p-3" },
-                        React.createElement("div", { className: "flex items-center gap-3" },
-                          React.createElement("div", { className: `w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                            idx === 0 ? 'bg-yellow-500 text-slate-900' :
-                            idx === 1 ? 'bg-slate-400 text-slate-900' :
-                            idx === 2 ? 'bg-amber-700 text-white' :
-                            'bg-slate-600 text-slate-300'
-                          }` },
-                            idx + 1
+                    leaderboard.map(([player, data], idx) => {
+                      const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
+                      const pointsBehind = firstPlacePoints - data.total;
+                      return (
+                        React.createElement("div", { key: player, className: "flex items-center justify-between bg-slate-700/30 rounded-lg p-3" },
+                          React.createElement("div", { className: "flex items-center gap-3" },
+                            React.createElement("div", { className: `w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                              idx === 0 ? 'bg-yellow-500 text-slate-900' :
+                              idx === 1 ? 'bg-slate-400 text-slate-900' :
+                              idx === 2 ? 'bg-amber-700 text-white' :
+                              'bg-slate-600 text-slate-300'
+                            }` },
+                              idx + 1
+                            ),
+                            React.createElement("span", { className: "text-white font-semibold" }, player)
                           ),
-                          React.createElement("span", { className: "text-white font-semibold" }, player)
-                        ),
-                        React.createElement("div", { className: "text-right" },
-                          React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
-                          React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`)
+                          React.createElement("div", { className: "text-right" },
+                            React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
+                            pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
+                            React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`)
+                          )
                         )
-                      )
-                    ))
+                      );
+                    })
                   )
                 )
               )
