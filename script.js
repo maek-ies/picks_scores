@@ -428,7 +428,23 @@ function NFLScoresTracker() {
         const maxPossiblePointsForWeek = (numberOfGamesInWeek / 2) * (1 + numberOfGamesInWeek) + 5; // New formula
 
         Object.keys(mockPicks).forEach(player => {
-          results[player].remainingPossible = maxPossiblePointsForWeek - results[player].totalConfidenceFromPlayedGames;
+          let totalConfidenceFromPlayedGamesForSelectedWeek = 0;
+          selectedWeekData.games.forEach(game => {
+            const playerPicks = mockPicks[player];
+            const pick = playerPicks.find(p => p.gameId === game.id);
+            if (pick) {
+              const isComplete = game.status === 'final' || game.status === 'post';
+              const isLiveGame = game.status === 'in' || game.status === 'live';
+              if (isComplete || isLiveGame) {
+                let confidence = pick.confidence;
+                if (gamesOfTheWeek.includes(game.id)) {
+                  confidence += 5;
+                }
+                totalConfidenceFromPlayedGamesForSelectedWeek += confidence;
+              }
+            }
+          });
+          results[player].remainingPossible = maxPossiblePointsForWeek - totalConfidenceFromPlayedGamesForSelectedWeek;
         });
       }
     }
@@ -630,7 +646,7 @@ function NFLScoresTracker() {
                                   game.status === 'scheduled' && game.date ? (
                                     React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
                                   ) : (
-                                    React.createElement("span", { className: "text-slate-400" }, "-")
+                                    React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
                                   )
                                 )
                               )
