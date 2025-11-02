@@ -632,7 +632,7 @@ function NFLScoresTracker() {
                                           const live = isLive(game);
                                           console.log('Game object in overview table:', game);
                                           return (
-                                            React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'border-green-500' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
+                                            React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'bg-green-500/10' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
                                 `${game.away} @ ${game.home}`,
                                 isGameOfTheWeek && (
