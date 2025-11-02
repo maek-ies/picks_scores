@@ -157,6 +157,7 @@ function NFLScoresTracker() {
   const [includeLiveGames, setIncludeLiveGames] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
+  const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -180,6 +181,10 @@ function NFLScoresTracker() {
     setLoading(true);
     setError(null);
     try {
+      const gamesOfTheWeekResponse = await fetch('data/games_of_the_week.txt').then(res => res.text());
+      const gamesOfTheWeekIds = gamesOfTheWeekResponse.split(",").map(id => parseInt(id.trim()));
+      setGamesOfTheWeek(gamesOfTheWeekIds);
+
       if (useMockData) {
         const [weeksResponse, picksResponse] = await Promise.all([
           fetch('data/weeks.json').then(res => res.json()),
@@ -265,7 +270,12 @@ function NFLScoresTracker() {
           const isComplete = game.status === 'final' || game.status === 'post';
           const isLiveGame = game.status === 'in' || game.status === 'live';
 
-          if(weekData.week === 1) results[player].possible += pick.confidence;
+          let confidence = pick.confidence;
+          if (gamesOfTheWeek.includes(game.id)) {
+            confidence += 5;
+          }
+
+          if(weekData.week === 1) results[player].possible += confidence;
 
           let winner = null;
           if (isComplete || (includeLiveGames && isLiveGame)) {
@@ -276,11 +286,11 @@ function NFLScoresTracker() {
           const isCorrect = winner === pickAbbreviation;
 
           if ((isComplete || (includeLiveGames && isLiveGame)) && isCorrect) {
-            results[player].total += pick.confidence;
+            results[player].total += confidence;
             if (weekData.week === selectedWeek) {
-              results[player].weekly += pick.confidence;
+              results[player].weekly += confidence;
             }
-            weeklyPoints[player] += pick.confidence;
+            weeklyPoints[player] += confidence;
             results[player].correct++;
           }
           
@@ -288,7 +298,7 @@ function NFLScoresTracker() {
               results[player].details.push({
                 gameId: game.id,
                 pick: pick.pick,
-                confidence: pick.confidence,
+                confidence: confidence,
                 winner: winner,
                 correct: (isComplete || (includeLiveGames && isLiveGame)) ? isCorrect : null,
                 homeTeam: game.home,
