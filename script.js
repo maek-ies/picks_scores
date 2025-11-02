@@ -197,21 +197,6 @@ function NFLScoresTracker() {
       const homeTeam = competition.competitors.find(t => t.homeAway === 'home');
       const awayTeam = competition.competitors.find(t => t.homeAway === 'away');
 
-      let homeWinProbability = null;
-      let awayWinProbability = null;
-
-      if (event.status.type.state === 'post' && event.winprobability && event.winprobability.length > 0) {
-        homeWinProbability = event.winprobability[0].homeWinPercentage;
-        awayWinProbability = 100 - event.winprobability[0].homeWinPercentage;
-      } else if ((event.status.type.state === 'in' || event.status.type.state === 'live') && event.winprobability && event.winprobability.length > 0) {
-        const latestWinProbability = event.winprobability[event.winprobability.length - 1];
-        homeWinProbability = latestWinProbability.homeWinPercentage;
-        awayWinProbability = 100 - latestWinProbability.homeWinPercentage;
-      } else if (event.predictor && event.predictor.homeTeam && event.predictor.awayTeam) {
-        homeWinProbability = event.predictor.homeTeam.gameProjection;
-        awayWinProbability = event.predictor.awayTeam.gameProjection;
-      }
-
       return {
         id: parseInt(event.id),
         date: event.date,
@@ -221,8 +206,6 @@ function NFLScoresTracker() {
         winner: event.status.type.state === 'post' ? (parseInt(homeTeam.score) > parseInt(awayTeam.score) ? homeTeam.team.abbreviation : awayTeam.team.abbreviation) : null,
         homeScore: parseInt(homeTeam.score),
         awayScore: parseInt(awayTeam.score),
-        homeWinProbability: homeWinProbability,
-        awayWinProbability: awayWinProbability,
       };
     });
   };
@@ -270,6 +253,48 @@ function NFLScoresTracker() {
         if (allWeeks.length > 0 && !selectedWeek) {
           setSelectedWeek(allWeeks[allWeeks.length - 1].week);
         }
+
+        // Fetch win probabilities for the selected week's games
+        const currentWeekGames = allWeeks.find(w => w.week === (selectedWeek || allWeeks[allWeeks.length - 1].week))?.games || [];
+        const gameSummaryPromises = currentWeekGames.map(async (game) => {
+          try {
+            const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
+            const summaryData = await summaryResponse.json();
+
+            let homeWinProbability = null;
+            let awayWinProbability = null;
+
+            if (summaryData.boxscore && summaryData.boxscore.winprobability && summaryData.boxscore.winprobability.length > 0) {
+              const winProbabilities = summaryData.boxscore.winprobability;
+              if (game.status === 'post') {
+                homeWinProbability = winProbabilities[0].homeWinPercentage;
+                awayWinProbability = 100 - winProbabilities[0].homeWinPercentage;
+              } else if (game.status === 'in' || game.status === 'live') {
+                const latestWinProbability = winProbabilities[winProbabilities.length - 1];
+                homeWinProbability = latestWinProbability.homeWinPercentage;
+                awayWinProbability = 100 - latestWinProbability.homeWinPercentage;
+              }
+            } else if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
+              homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection;
+              awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection;
+            }
+
+            return { ...game, homeWinProbability, awayWinProbability };
+          } catch (summaryError) {
+            console.error(`Error fetching summary for game ${game.id}:`, summaryError);
+            return game; // Return original game if summary fetch fails
+          }
+        });
+        const gamesWithWinProbabilities = await Promise.all(gameSummaryPromises);
+
+        const updatedWeeks = allWeeks.map(weekData => {
+          if (weekData.week === (selectedWeek || allWeeks[allWeeks.length - 1].week)) {
+            return { ...weekData, games: gamesWithWinProbabilities };
+          }
+          return weekData;
+        });
+        setWeeks(updatedWeeks);
+
         // When using live data, we still need mock picks
         const picksResponse = await fetch('data/picks.json').then(res => res.json());
         const transformedPicks = {};
