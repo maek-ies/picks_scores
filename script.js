@@ -258,6 +258,7 @@ function NFLScoresTracker() {
         const currentWeekGames = allWeeks.find(w => w.week === (selectedWeek || allWeeks[allWeeks.length - 1].week))?.games || [];
         const gameSummaryPromises = currentWeekGames.map(async (game) => {
           try {
+            console.log(`Fetching summary for game ID: ${game.id}`);
             const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
             const summaryData = await summaryResponse.json();
             console.log(`Summary data for game ${game.id}:`, summaryData);
@@ -279,7 +280,7 @@ function NFLScoresTracker() {
               homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection;
               awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection;
             }
-            console.log(`Game ${game.id} Win Probabilities: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
+            console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
             return { ...game, homeWinProbability, awayWinProbability };
           } catch (summaryError) {
