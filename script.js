@@ -623,7 +623,7 @@ function NFLScoresTracker() {
                             React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700" },
                               React.createElement("div", { className: "text-white font-semibold text-sm" }, player),
                               React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
-                              pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
+                              idx === 0 ? React.createElement("div", { className: "text-xs text-green-400" }, "Leader") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
                               React.createElement("div", { className: "text-slate-400 text-xs" }, `This Week: ${data.weekly}`),
                               React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
                             )

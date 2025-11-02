@@ -7,7 +7,7 @@ library(data.table)
 
 #sel_week              = 7
 prepare_list_of_games = 0
-extract_all_picks     = 1
+extract_all_picks     = 0
 refresh_current_week  = 1
 all_picks_file        = "all_picks_gh.gz"
 final_file            = "dt_picks_gh.gz"
