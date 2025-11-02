@@ -1,40 +1,33 @@
 body {
-    font-family: sans-serif;
-    margin: 2em;
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
 }
 
-h1 {
-    text-align: center;
+.header {
+    border-bottom: 1px solid #333;
 }
 
-.options {
-    margin-bottom: 1em;
-    text-align: center;
+.card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    margin-bottom: 1rem;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th, td {
-    border: 1px solid #ccc;
-    padding: 0.5em;
-    text-align: center;
-}
-
-thead th {
-    background-color: #f2f2f2;
-}
-
-.winner {
-    font-weight: bold;
+.card-header {
+    background-color: #252525;
+    border-bottom: 1px solid #333;
 }
 
 .correct-pick {
-    background-color: #d4edda;
+    background-color: #28a745 !important;
+    color: white !important;
 }
 
 .incorrect-pick {
-    background-color: #f8d7da;
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.player-pick {
+    font-size: 0.9rem;
 }

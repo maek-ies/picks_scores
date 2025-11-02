@@ -22,28 +22,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return scores;
     }
 
-    function renderTable(scores, games) {
-        let tableHtml = '<table>';
-        
-        // Header
-        tableHtml += '<thead><tr><th>Game</th><th>Result</th>';
-        players.forEach(player => {
-            tableHtml += `<th>${player}</th>`;
-        });
-        tableHtml += '</tr></thead>';
+    function renderCards(scores, games) {
+        let cardsHtml = '';
 
-        // Scores
-        tableHtml += '<tbody><tr><td></td><td></td>';
-        players.forEach(player => {
-            tableHtml += `<td><strong>${scores[player]}</strong></td>`;
-        });
-        tableHtml += '</tr>';
-
-        // Games
         games.forEach(game => {
-            tableHtml += `<tr>`;
-            tableHtml += `<td>${game.away} @ ${game.home}</td>`;
-            tableHtml += `<td>${game.winner || '-'}</td>`;
+            cardsHtml += `
+                <div class="card">
+                    <div class="card-header">
+                        ${game.away} @ ${game.home}
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h5>Result: ${game.winner || '-'}</h5>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="row">
+            `;
 
             players.forEach(player => {
                 const pick = window.mockPicks[player].find(p => p.gameId === game.id);
@@ -56,63 +51,32 @@ document.addEventListener('DOMContentLoaded', () => {
                             cellClass = 'incorrect-pick';
                         }
                     }
-                    tableHtml += `<td class="${cellClass}">${pick.pick} (${pick.confidence})</td>`;
+                    cardsHtml += `
+                        <div class="col-md-3 player-pick ${cellClass}">
+                            <strong>${player}:</strong> ${pick.pick} (${pick.confidence})
+                        </div>
+                    `;
                 } else {
-                    tableHtml += '<td>-</td>';
+                    cardsHtml += `
+                        <div class="col-md-3 player-pick">
+                            <strong>${player}:</strong> -
+                        </div>
+                    `;
                 }
             });
 
-            tableHtml += '</tr>';
+            cardsHtml += `
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         });
 
-        tableHtml += '</tbody></table>';
-        app.innerHTML = tableHtml;
+        app.innerHTML = cardsHtml;
     }
-        let tableHtml = '<table>';
-        
-        // Header
-        tableHtml += '<thead><tr><th>Game</th><th>Result</th>';
-        players.forEach(player => {
-            tableHtml += `<th>${player}</th>`;
-        });
-        tableHtml += '</tr></thead>';
 
-        // Scores
-        tableHtml += '<tbody><tr><td></td><td></td>';
-        players.forEach(player => {
-            tableHtml += `<td><strong>${scores[player]}</strong></td>`;
-        });
-        tableHtml += '</tr>';
-
-        // Games
-        games.forEach(game => {
-            tableHtml += `<tr>`;
-            tableHtml += `<td>${game.away} @ ${game.home}</td>`;
-            tableHtml += `<td>${game.winner || '-'}</td>`;
-
-            players.forEach(player => {
-                const pick = window.mockPicks[player].find(p => p.gameId === game.id);
-                if (pick) {
-                    let cellClass = '';
-                    if (game.status === 'final' || (includeLiveGamesCheckbox.checked && game.status === 'live')) {
-                        if (game.winner === pick.pick) {
-                            cellClass = 'correct-pick';
-                        } else {
-                            cellClass = 'incorrect-pick';
-                        }
-                    }
-                    tableHtml += `<td class="${cellClass}">${pick.pick} (${pick.confidence})</td>`;
-                } else {
-                    tableHtml += '<td>-</td>';
-                }
-            });
-
-            tableHtml += '</tr>';
-        });
-
-        tableHtml += '</tbody></table>';
-        app.innerHTML = tableHtml;
-    }
 
     const fetchDataButton = document.getElementById('fetch-data');
 
@@ -144,7 +108,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const games = fetchedGames || window.mockResults.games;
         const includeLive = includeLiveGamesCheckbox.checked;
         const scores = calculateScores(includeLive, games);
-        renderTable(scores, games);
+        renderScores(scores);
+        renderCards(scores, games);
+    }
+
+    function renderScores(scores) {
+        const scoresDiv = document.getElementById('scores');
+        let scoresHtml = '<div class="row">';
+        players.forEach(player => {
+            scoresHtml += `
+                <div class="col-md-2">
+                    <strong>${player}:</strong> ${scores[player]}
+                </div>
+            `;
+        });
+        scoresHtml += '</div>';
+        scoresDiv.innerHTML = scoresHtml;
     }
 
     includeLiveGamesCheckbox.addEventListener('change', updateView);

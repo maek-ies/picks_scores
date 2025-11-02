@@ -4,18 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NFL Pick'em Confidence Scores</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <h1>NFL Pick'em Confidence Scores</h1>
-    <div class="options">
-        <label>
-            <input type="checkbox" id="include-live-games">
-            Include live games in score
-        </label>
-        <button id="fetch-data">Fetch Latest Results</button>
+<body class="bg-dark text-white">
+    <div class="container">
+        <div class="header py-3">
+            <h1 class="text-center">NFL Pick'em Confidence Scores</h1>
+            <div class="options text-center my-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="include-live-games">
+                    <label class="form-check-label" for="include-live-games">Include live games</label>
+                </div>
+                <button id="fetch-data" class="btn btn-primary">Fetch Latest Results</button>
+            </div>
+        </div>
+            <div id="scores" class="scores text-center my-3"></div>
     </div>
-    <div id="app"></div>
     <script src="data/results.js"></script>
     <script src="data/picks.js"></script>
     <script src="script.js"></script>
