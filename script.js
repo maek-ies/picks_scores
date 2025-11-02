@@ -186,13 +186,13 @@ function ChartTable({ confidenceResults }) {
 function CumulativeChart({ cumulativeConfidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(cumulativeConfidenceResults);
-  const xScale = (week) => {
+  const xScale = (week, chartWidth, padding) => {
     if (weeks.length <= 1) {
-      return chartWidth / 2; // Center the point if only one week or no weeks
+      return padding + (chartWidth - 2 * padding) / 2; // Center the point if only one week or no weeks
     }
     return padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
   };
-  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+  const yScale = (points, chartHeight, padding, maxPoints) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
 
@@ -206,8 +206,8 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
 
     players.forEach((player, playerIndex) => {
       cumulativeConfidenceResults[player].pointsPerWeek.forEach(d => {
-        const pointX = xScale(d.week);
-        const pointY = yScale(d.points);
+        const pointX = xScale(d.week, chartWidth, padding);
+        const pointY = yScale(d.points, chartHeight, padding, maxPoints);
         const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
 
         if (distance < minDistance && distance < 20) {
@@ -231,14 +231,14 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
         weeks.map(week => (
-          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+          React.createElement("text", { key: week, x: xScale(week, chartWidth, padding), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
         )),
 
         // Y-axis
         React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
         Array.from({ length: 5 }).map((_, i) => {
           const points = Math.round(maxPoints / 4 * i);
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points, chartHeight, padding, maxPoints), fill: "#94a3b8", textAnchor: "end" }, points);
         }),
 
         // Lines
@@ -248,7 +248,7 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
             fill: "none",
             stroke: colors[playerIndex % colors.length],
             strokeWidth: 2,
-            points: cumulativeConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
+            points: cumulativeConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week, chartWidth, padding)},${yScale(d.points, chartHeight, padding, maxPoints)}`).join(' ')
           })
         )),
 
@@ -270,6 +270,7 @@ function CumulativeChart({ cumulativeConfidenceResults }) {
       )
     )
   );
+}
 }
 
 function NFLScoresTracker() {
@@ -728,7 +729,8 @@ function NFLScoresTracker() {
                         ),
                         React.createElement("div", { className: "text-right" },
                           React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
-                          React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`)
+                          React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`),
+                          idx > 0 && React.createElement("div", { className: "text-xs text-slate-400" }, `Diff: ${leaderboard[0][1].total - data.total}`)
                         )
                       )
                     ))
