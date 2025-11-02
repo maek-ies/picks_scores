@@ -35,6 +35,7 @@ function NFLScoresTracker() {
   const [confidenceView, setConfidenceView] = useState('overview');
   const [includeLiveGames, setIncludeLiveGames] = useState(false);
   const [useMockData, setUseMockData] = useState(true);
+  const [mockPicks, setMockPicks] = useState({});
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -42,7 +43,7 @@ function NFLScoresTracker() {
       const homeTeam = competition.competitors.find(t => t.homeAway === 'home');
       const awayTeam = competition.competitors.find(t => t.homeAway === 'away');
       return {
-        id: event.id,
+        id: parseInt(event.id),
         date: event.date,
         home: homeTeam.team.abbreviation,
         away: awayTeam.team.abbreviation,
@@ -59,11 +60,29 @@ function NFLScoresTracker() {
     setError(null);
     try {
       if (useMockData) {
-        const allWeeks = window.weeks || [];
-        setWeeks(allWeeks);
-        if (allWeeks.length > 0 && !selectedWeek) {
-          setSelectedWeek(allWeeks[allWeeks.length - 1].week);
+        const [weeksResponse, picksResponse] = await Promise.all([
+          fetch('data/weeks.json').then(res => res.json()),
+          fetch('data/picks.json').then(res => res.json())
+        ]);
+
+        setWeeks(weeksResponse);
+        if (weeksResponse.length > 0 && !selectedWeek) {
+          setSelectedWeek(weeksResponse[weeksResponse.length - 1].week);
         }
+
+        const transformedPicks = {};
+        picksResponse.forEach(pick => {
+          if (!transformedPicks[pick.name]) {
+            transformedPicks[pick.name] = [];
+          }
+          transformedPicks[pick.name].push({
+            gameId: pick.game_id,
+            pick: pick.picked,
+            confidence: pick.confidence
+          });
+        });
+        setMockPicks(transformedPicks);
+
       } else {
         const weekPromises = Array.from({ length: 9 }, (_, i) => i + 1).map(weekNum =>
           fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNum}`)
@@ -75,10 +94,24 @@ function NFLScoresTracker() {
         if (allWeeks.length > 0 && !selectedWeek) {
           setSelectedWeek(allWeeks[allWeeks.length - 1].week);
         }
+        // When using live data, we still need mock picks
+        const picksResponse = await fetch('data/picks.json').then(res => res.json());
+        const transformedPicks = {};
+        picksResponse.forEach(pick => {
+          if (!transformedPicks[pick.name]) {
+            transformedPicks[pick.name] = [];
+          }
+          transformedPicks[pick.name].push({
+            gameId: pick.game_id,
+            pick: pick.picked,
+            confidence: pick.confidence
+          });
+        });
+        setMockPicks(transformedPicks);
       }
     } catch (err) {
       console.error("Fetch error:", err);
-      setError("Unable to fetch live data from ESPN. Please try again or use mock data.");
+      setError("Unable to fetch data. Please try again or use mock data.");
     } finally {
       setLoading(false);
       setLastUpdate(new Date());
@@ -91,7 +124,6 @@ function NFLScoresTracker() {
 
   const calculateConfidencePoints = () => {
     const results = {};
-    const mockPicks = window.mockPicks || {};
 
     Object.keys(mockPicks).forEach(player => {
       results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [] };
@@ -104,8 +136,8 @@ function NFLScoresTracker() {
           const pick = playerPicks.find(p => p.gameId === game.id);
           if (!pick) return;
 
-          const isComplete = game.status === 'post';
-          const isLiveGame = game.status === 'in';
+          const isComplete = game.status === 'final' || game.status === 'post';
+          const isLiveGame = game.status === 'in' || game.status === 'live';
 
           results[player].possible += pick.confidence;
 
@@ -146,13 +178,13 @@ function NFLScoresTracker() {
   };
 
   const getGameStatus = (game) => {
-    if (game.status === 'post') return 'FINAL';
-    if (game.status === 'in') return 'LIVE';
+    if (game.status === 'final' || game.status === 'post') return 'FINAL';
+    if (game.status === 'in' || game.status === 'live') return 'LIVE';
     return 'Scheduled';
   };
 
   const isLive = (game) => {
-    return game.status === 'in';
+    return game.status === 'in' || game.status === 'live';
   };
 
   const displayedWeek = weeks.find(w => w.week === selectedWeek);
@@ -306,7 +338,7 @@ function NFLScoresTracker() {
                             ),
                             React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-sm" },
-                                game.status === 'post' || (includeLiveGames && game.status === 'in') ? (
+                                game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
                                   React.createElement("span", { className: "text-white font-semibold" }, `${game.awayScore}-${game.homeScore}`)
                                 ) : (
                                   React.createElement("span", { className: "text-slate-400" }, "-")
@@ -354,7 +386,7 @@ function NFLScoresTracker() {
                     "Leaderboard"
                   ),
                   React.createElement("div", { className: "space-y-2" },
-                    leaderboard.map(([player, data], idx) => (
+                    leaderboard.map(([player, data]) => (
                       React.createElement("div", { key: player, className: "flex items-center justify-between bg-slate-700/30 rounded-lg p-3" },
                         React.createElement("div", { className: "flex items-center gap-3" },
                           React.createElement("div", { className: `w-8 h-8 rounded-full flex items-center justify-center font-bold ${
