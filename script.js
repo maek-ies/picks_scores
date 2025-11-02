@@ -519,9 +519,12 @@ function NFLScoresTracker() {
                                         (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
                                           const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
                                           return (
-                                            React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${isGameOfTheWeek ? 'border-red-500 border-2' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
-                              React.createElement("div", { className: "text-white text-sm font-medium" },
-                                `${game.away} @ ${game.home}`
+                                            React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },                            React.createElement("td", { className: "px-4 py-3" },
+                              React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
+                                `${game.away} @ ${game.home}`,
+                                isGameOfTheWeek && (
+                                  React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
+                                )
                               )
                             ),
                             React.createElement("td", { className: "px-4 py-3" },
