@@ -223,7 +223,7 @@ function NFLScoresTracker() {
       if (useMockData) {
         const [weeksResponse, picksResponse] = await Promise.all([
           fetch('data/weeks.json').then(res => res.json()),
-          fetch('data/picks.json').then(res => res.json())
+          fetch('picks.json').then(res => res.json())
         ]);
 
         setWeeks(weeksResponse);
@@ -305,7 +305,7 @@ function NFLScoresTracker() {
         setWeeks(updatedWeeks);
 
         // When using live data, we still need mock picks
-        const picksResponse = await fetch('data/picks.json').then(res => res.json());
+        const picksResponse = await fetch('picks.json').then(res => res.json());
         const transformedPicks = {};
         picksResponse.forEach(pick => {
           if (!transformedPicks[pick.name]) {
