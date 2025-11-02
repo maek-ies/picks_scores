@@ -632,7 +632,15 @@ function NFLScoresTracker() {
                       )
                     ),
                                       React.createElement("tbody", null,
-                                        (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
+                                        (displayedWeek ? [...displayedWeek.games].sort((a, b) => {
+                                          const aIsLive = isLive(a);
+                                          const bIsLive = isLive(b);
+
+                                          if (aIsLive && !bIsLive) return -1; // a (live) comes before b (not live)
+                                          if (!aIsLive && bIsLive) return 1;  // b (live) comes before a (not live)
+
+                                          return new Date(a.date) - new Date(b.date); // Sort by date if both are live or both are not live
+                                        }) : []).map((game) => {
                                           const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
                                           const live = isLive(game);
                                           console.log('Game object in overview table:', game);
