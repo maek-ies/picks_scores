@@ -206,6 +206,8 @@ function NFLScoresTracker() {
         winner: event.status.type.state === 'post' ? (parseInt(homeTeam.score) > parseInt(awayTeam.score) ? homeTeam.team.abbreviation : awayTeam.team.abbreviation) : null,
         homeScore: parseInt(homeTeam.score),
         awayScore: parseInt(awayTeam.score),
+        displayClock: event.status.type.detail, // Assuming this path for clock
+        period: event.status.period, // Assuming this path for period
       };
     });
   };
@@ -715,6 +717,7 @@ function NFLScoresTracker() {
                         }` },
                           live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
                           status,
+                          live && game.displayClock && game.period && React.createElement("span", null, `Q${game.period} - ${game.displayClock}`),
                           isGameOfTheWeek && (
                             React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
                           )
