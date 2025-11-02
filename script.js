@@ -25,6 +25,60 @@ const teamAbbreviations = {
   "Pittsburgh Steelers": "PIT",
 };
 
+function Chart({ confidenceResults }) {
+  const players = Object.keys(confidenceResults);
+  const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = Math.max(...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
+
+  const chartWidth = 800;
+  const chartHeight = 400;
+  const padding = 50;
+
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Points per Week"),
+      React.createElement("svg", { width: chartWidth, height: chartHeight },
+        // X-axis
+        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        weeks.map(week => (
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+        )),
+
+        // Y-axis
+        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        Array.from({ length: 5 }).map((_, i) => {
+          const points = Math.round(maxPoints / 4 * i);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+        }),
+
+        // Lines
+        players.map((player, playerIndex) => (
+          React.createElement("polyline", {
+            key: player,
+            fill: "none",
+            stroke: colors[playerIndex % colors.length],
+            strokeWidth: 2,
+            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
+          })
+        )),
+
+        // Legend
+        players.map((player, playerIndex) => (
+          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
+            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+          )
+        ))
+      )
+    )
+  );
+}
+
 function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -126,10 +180,15 @@ function NFLScoresTracker() {
     const results = {};
 
     Object.keys(mockPicks).forEach(player => {
-      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [] };
+      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [] };
     });
 
     weeks.forEach(weekData => {
+      let weeklyPoints = {};
+      Object.keys(mockPicks).forEach(player => {
+        weeklyPoints[player] = 0;
+      });
+
       weekData.games.forEach(game => {
         Object.keys(mockPicks).forEach(player => {
           const playerPicks = mockPicks[player];
@@ -139,7 +198,7 @@ function NFLScoresTracker() {
           const isComplete = game.status === 'final' || game.status === 'post';
           const isLiveGame = game.status === 'in' || game.status === 'live';
 
-          results[player].possible += pick.confidence;
+          if(weekData.week === 1) results[player].possible += pick.confidence;
 
           let winner = null;
           if (isComplete || (includeLiveGames && isLiveGame)) {
@@ -154,6 +213,7 @@ function NFLScoresTracker() {
             if (weekData.week === selectedWeek) {
               results[player].weekly += pick.confidence;
             }
+            weeklyPoints[player] += pick.confidence;
             results[player].correct++;
           }
           
@@ -171,6 +231,10 @@ function NFLScoresTracker() {
               });
           }
         });
+      });
+
+      Object.keys(mockPicks).forEach(player => {
+        results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player] });
       });
     });
 
@@ -254,6 +318,16 @@ function NFLScoresTracker() {
               }`
             },
               "Scores"
+            ),
+            React.createElement("button", {
+              onClick: () => setActiveTab('chart'),
+              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'chart'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`
+            },
+              "Chart"
             )
           )
         )
@@ -271,6 +345,8 @@ function NFLScoresTracker() {
               React.createElement("p", { className: "text-slate-300" }, "Loading...")
             )
           )
+        ) : activeTab === 'chart' ? (
+          React.createElement(Chart, { confidenceResults: confidenceResults })
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
             React.createElement("div", { className: "flex items-center justify-between mb-6" },
@@ -386,7 +462,7 @@ function NFLScoresTracker() {
                     "Leaderboard"
                   ),
                   React.createElement("div", { className: "space-y-2" },
-                    leaderboard.map(([player, data]) => (
+                    leaderboard.map(([player, data], idx) => (
                       React.createElement("div", { key: player, className: "flex items-center justify-between bg-slate-700/30 rounded-lg p-3" },
                         React.createElement("div", { className: "flex items-center gap-3" },
                           React.createElement("div", { className: `w-8 h-8 rounded-full flex items-center justify-center font-bold ${
