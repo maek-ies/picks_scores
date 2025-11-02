@@ -277,8 +277,14 @@ function NFLScoresTracker() {
   };
 
   useEffect(() => {
-    fetchScores();
-  }, [useMockData]);
+    fetchScores(); // Initial fetch
+
+    const intervalId = setInterval(() => {
+      fetchScores(); // Fetch every minute
+    }, 60 * 1000); // 1 minute
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, [useMockData]); // Re-run if useMockData changes
 
   const calculateConfidencePoints = () => {
     const results = {};
@@ -303,7 +309,7 @@ function NFLScoresTracker() {
           const isLiveGame = game.status === 'in' || game.status === 'live';
 
           let confidence = pick.confidence;
-          if (gamesOfTheWeek.includes(game.id)) {
+          if (gamesOfTheWeek.includes(game.id) && (isComplete || isLiveGame)) {
             confidence += 5;
           }
 
@@ -400,6 +406,9 @@ function NFLScoresTracker() {
                     : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                 }` },
                 useMockData ? "Using Mock Data" : "Using Live Data"
+              ),
+              React.createElement("button", { onClick: fetchScores, className: "px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
+                "Refresh Scores"
               ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
@@ -523,7 +532,7 @@ function NFLScoresTracker() {
                               React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
                                 `${game.away} @ ${game.home}`,
                                 isGameOfTheWeek && (
-                                  React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
+                                  React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
                                 )
                               )
                             ),
