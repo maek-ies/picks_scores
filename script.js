@@ -1,5 +1,30 @@
 const { useState, useEffect } = React;
 
+const teamAbbreviations = {
+  "Kansas City Chiefs": "KC",
+  "Denver Broncos": "DEN",
+  "Green Bay Packers": "GB",
+  "Detroit Lions": "DET",
+  "Philadelphia Eagles": "PHI",
+  "Washington Commanders": "WAS",
+  "Arizona Cardinals": "ARI",
+  "Seattle Seahawks": "SEA",
+  "New York Giants": "NYG",
+  "Las Vegas Raiders": "LV",
+  "Dallas Cowboys": "DAL",
+  "Buffalo Bills": "BUF",
+  "New England Patriots": "NE",
+  "San Francisco 49ers": "SF",
+  "Tampa Bay Buccaneers": "TB",
+  "Los Angeles Rams": "LAR",
+  "Baltimore Ravens": "BAL",
+  "Miami Dolphins": "MIA",
+  "Cincinnati Bengals": "CIN",
+  "Cleveland Browns": "CLE",
+  "Atlanta Falcons": "ATL",
+  "Pittsburgh Steelers": "PIT",
+};
+
 function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -45,7 +70,8 @@ function NFLScoresTracker() {
             winner = game.winner;
           }
 
-          const isCorrect = winner === pick.pick;
+          const pickAbbreviation = teamAbbreviations[pick.pick] || pick.pick;
+          const isCorrect = winner === pickAbbreviation;
 
           if ((isComplete || (includeLiveGames && isLiveGame)) && isCorrect) {
             results[player].total += pick.confidence;
@@ -250,7 +276,7 @@ function NFLScoresTracker() {
                                             isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                             'bg-slate-700/50 text-slate-300 border border-slate-600'
                                         }` },
-                                            React.createElement("span", null, detail.pick),
+                                            React.createElement("span", null, teamAbbreviations[detail.pick] || detail.pick),
                                             React.createElement("span", { className: `text-xs px-1.5 py-0.5 rounded ${
                                                 isCorrect ? 'bg-green-500 text-white' :
                                                 isWrong ? 'bg-red-500 text-white' :
@@ -330,14 +356,14 @@ function NFLScoresTracker() {
                         React.createElement("div", { className: "p-4" },
                           React.createElement("div", { className: "flex items-center justify-between mb-2" },
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
-                              React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.split(' ').pop().toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
+                              React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.away),
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.awayScore)
                           ),
                           React.createElement("div", { className: "flex items-center justify-between" },
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
-                              React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.split(' ').pop().toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
+                              React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
                               React.createElement("span", { className: "text-white font-semibold" }, game.home),
                             ),
                             React.createElement("span", { className: "text-2xl font-bold text-white" }, game.homeScore)
