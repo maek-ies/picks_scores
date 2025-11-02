@@ -274,12 +274,12 @@ function NFLScoresTracker() {
                 // No win probability computation for finished games
               } else if (game.status === 'in' || game.status === 'live') {
                 const latestWinProbability = winProbabilities[winProbabilities.length - 1];
-                homeWinProbability = latestWinProbability.homeWinPercentage;
-                awayWinProbability = 100 - latestWinProbability.homeWinPercentage;
+                homeWinProbability = latestWinProbability.homeWinPercentage * 100;
+                awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
               }
             } else if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
-              homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection;
-              awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection;
+              homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection * 100;
+              awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection * 100;
             }
             console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
