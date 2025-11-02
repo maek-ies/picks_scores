@@ -605,14 +605,15 @@ function NFLScoresTracker() {
           React.createElement("div", { className: "space-y-6" },
             Object.entries(gamesByDate).map(([date, dateGames]) => (
               React.createElement("div", { key: date },
-                React.createElement("h2", { className: "text-lg font-bold text-white mb-3 flex items-center gap-2" },
+                React.createElement("h2", { className: "text-base font-bold text-white mb-2 flex items-center gap-2" },
                   React.createElement("div", { className: "w-1 h-5 bg-blue-500 rounded" }),
                   date
                 ),
-                React.createElement("div", { className: "space-y-3" },
-                  dateGames.map((game) => {
+                React.createElement("div", { className: "space-y-2" },
+                  dateGames.sort((a, b) => new Date(a.date) - new Date(b.date)).map((game) => {
                     const live = isLive(game);
                     const status = getGameStatus(game);
+                    const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
 
                     return (
                       React.createElement("div",
@@ -621,13 +622,16 @@ function NFLScoresTracker() {
                           live ? 'border-green-500' : 'border-slate-700'
                         } overflow-hidden`
                       },
-                        React.createElement("div", { className: `px-3 py-1.5 text-xs font-semibold text-center ${
+                        React.createElement("div", { className: `px-2 py-1 text-xs font-semibold text-center flex items-center justify-center gap-2 ${
                           live ? 'bg-green-500 text-white' : 'bg-slate-700/50 text-slate-300'
                         }` },
                           live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
-                          status
+                          status,
+                          isGameOfTheWeek && (
+                            React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
+                          )
                         ),
-                        React.createElement("div", { className: "p-4" },
+                        React.createElement("div", { className: "p-3" },
                           React.createElement("div", { className: "flex items-center justify-between mb-2" },
                             React.createElement("div", { className: "flex items-center gap-3 flex-1" },
                               React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
