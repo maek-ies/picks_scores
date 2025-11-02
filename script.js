@@ -26,6 +26,7 @@ const teamAbbreviations = {
 };
 
 function Chart({ confidenceResults }) {
+  const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
   const maxPoints = Math.max(...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
@@ -39,10 +40,38 @@ function Chart({ confidenceResults }) {
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
 
+  const handleMouseMove = (e) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    players.forEach((player, playerIndex) => {
+      confidenceResults[player].pointsPerWeek.forEach(d => {
+        const pointX = xScale(d.week);
+        const pointY = yScale(d.points);
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+
+        if (distance < minDistance && distance < 20) {
+          minDistance = distance;
+          closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+        }
+      });
+    });
+
+    setActivePoint(closestPoint);
+  };
+
+  const handleMouseLeave = () => {
+    setActivePoint(null);
+  };
+
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
       React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Points per Week"),
-      React.createElement("svg", { width: chartWidth, height: chartHeight },
+      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
         weeks.map(week => (
@@ -67,6 +96,14 @@ function Chart({ confidenceResults }) {
           })
         )),
 
+        // Active point
+        activePoint && React.createElement("g", null,
+          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
+          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
+        ),
+
         // Legend
         players.map((player, playerIndex) => (
           React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
@@ -77,6 +114,34 @@ function Chart({ confidenceResults }) {
       )
     )
   );
+}
+
+function ChartTable({ confidenceResults }) {
+    const players = Object.keys(confidenceResults);
+    const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+
+    return (
+        React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
+            React.createElement("table", { className: "w-full" },
+                React.createElement("thead", null,
+                    React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Player"),
+                        weeks.map(week => React.createElement("th", { key: week, className: "px-4 py-3 text-center text-white font-semibold text-sm" }, `Week ${week}`))
+                    )
+                ),
+                React.createElement("tbody", null,
+                    players.map(player => (
+                        React.createElement("tr", { key: player, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                            React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, player),
+                            confidenceResults[player].pointsPerWeek.map(d => (
+                                React.createElement("td", { key: d.week, className: "px-4 py-3 text-center text-slate-300" }, d.points)
+                            ))
+                        )
+                    ))
+                )
+            )
+        )
+    );
 }
 
 function NFLScoresTracker() {
@@ -346,7 +411,10 @@ function NFLScoresTracker() {
             )
           )
         ) : activeTab === 'chart' ? (
-          React.createElement(Chart, { confidenceResults: confidenceResults })
+          React.createElement("div", null, 
+            React.createElement(Chart, { confidenceResults: confidenceResults }),
+            React.createElement(ChartTable, { confidenceResults: confidenceResults })
+          )
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
             React.createElement("div", { className: "flex items-center justify-between mb-6" },
