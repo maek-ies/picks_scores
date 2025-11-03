@@ -25,7 +25,7 @@ const teamAbbreviations = {
   "Pittsburgh Steelers": "PIT",
 };
 
-function Chart({ confidenceResults }) {
+function WeeklyPointsChart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
@@ -116,7 +116,7 @@ function Chart({ confidenceResults }) {
   );
 }
 
-function ChartTable({ confidenceResults }) {
+function WeeklyPointsTable({ confidenceResults }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
@@ -168,6 +168,313 @@ function ChartTable({ confidenceResults }) {
                             players.map(player => (
                                 React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, 
                                     confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0
+                                )
+                            ))
+                        )
+                    ))
+                )
+            )
+        )
+    );
+}
+
+function CumulativePointsChart({ confidenceResults }) {
+  const [activePoint, setActivePoint] = useState(null);
+  const players = Object.keys(confidenceResults);
+  const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.cumulativePoints)));
+
+  const chartWidth = 800;
+  const chartHeight = 400;
+  const padding = 50;
+
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+  const handleMouseMove = (e) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    players.forEach((player, playerIndex) => {
+      confidenceResults[player].pointsPerWeek.forEach(d => {
+        const pointX = xScale(d.week);
+        const pointY = yScale(d.cumulativePoints);
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+
+        if (distance < minDistance && distance < 20) {
+          minDistance = distance;
+          closestPoint = { player, week: d.week, cumulativePoints: d.cumulativePoints, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+        }
+      });
+    });
+
+    setActivePoint(closestPoint);
+  };
+
+  const handleMouseLeave = () => {
+    setActivePoint(null);
+  };
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points"),
+      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
+        // X-axis
+        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        weeks.map(week => (
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+        )),
+
+        // Y-axis
+        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        Array.from({ length: 5 }).map((_, i) => {
+          const points = Math.round(maxPoints / 4 * i);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+        }),
+
+        // Lines
+        players.map((player, playerIndex) => (
+          React.createElement("polyline", {
+            key: player,
+            fill: "none",
+            stroke: colors[playerIndex % colors.length],
+            strokeWidth: 2,
+            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.cumulativePoints)}`).join(' ')
+          })
+        )),
+
+        // Active point
+        activePoint && React.createElement("g", null,
+          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
+          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.cumulativePoints} pts`)
+        ),
+
+        // Legend
+        players.map((player, playerIndex) => (
+          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
+            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+          )
+        ))
+      )
+    )
+  );
+}
+
+function WeeklyPointsTable({ confidenceResults }) {
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+    const players = Object.keys(confidenceResults);
+    const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+
+    const sortedWeeks = React.useMemo(() => {
+        let sortableWeeks = [...weeks];
+        if (sortConfig.key !== null) {
+            sortableWeeks.sort((a, b) => {
+                const aPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === a)?.points || 0;
+                const bPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === b)?.points || 0;
+                if (aPoints < bPoints) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aPoints > bPoints) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableWeeks;
+    }, [weeks, sortConfig, confidenceResults]);
+
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    return (
+        React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
+            React.createElement("table", { className: "w-full" },
+                React.createElement("thead", null,
+                    React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Week"),
+                        players.map(player => 
+                            React.createElement("th", { key: player, className: "px-4 py-3 text-center text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort(player) }, 
+                                player,
+                                sortConfig.key === player && (sortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
+                            )
+                        )
+                    )
+                ),
+                React.createElement("tbody", null,
+                    sortedWeeks.map(week => (
+                        React.createElement("tr", { key: week, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                            React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, `Week ${week}`),
+                            players.map(player => (
+                                React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, 
+                                    confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0
+                                )
+                            ))
+                        )
+                    ))
+                )
+            )
+        )
+    );
+}
+
+function CumulativePointsChart({ confidenceResults }) {
+  const [activePoint, setActivePoint] = useState(null);
+  const players = Object.keys(confidenceResults);
+  const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.cumulativePoints)));
+
+  const chartWidth = 800;
+  const chartHeight = 400;
+  const padding = 50;
+
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+  const handleMouseMove = (e) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    players.forEach((player, playerIndex) => {
+      confidenceResults[player].pointsPerWeek.forEach(d => {
+        const pointX = xScale(d.week);
+        const pointY = yScale(d.cumulativePoints);
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+
+        if (distance < minDistance && distance < 20) {
+          minDistance = distance;
+          closestPoint = { player, week: d.week, cumulativePoints: d.cumulativePoints, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+        }
+      });
+    });
+
+    setActivePoint(closestPoint);
+  };
+
+  const handleMouseLeave = () => {
+    setActivePoint(null);
+  };
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points"),
+      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
+        // X-axis
+        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        weeks.map(week => (
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+        )),
+
+        // Y-axis
+        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        Array.from({ length: 5 }).map((_, i) => {
+          const points = Math.round(maxPoints / 4 * i);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+        }),
+
+        // Lines
+        players.map((player, playerIndex) => (
+          React.createElement("polyline", {
+            key: player,
+            fill: "none",
+            stroke: colors[playerIndex % colors.length],
+            strokeWidth: 2,
+            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.cumulativePoints)}`).join(' ')
+          })
+        )),
+
+        // Active point
+        activePoint && React.createElement("g", null,
+          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
+          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.cumulativePoints} pts`)
+        ),
+
+        // Legend
+        players.map((player, playerIndex) => (
+          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
+            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+          )
+        ))
+      )
+    )
+  );
+}
+
+function CumulativePointsTable({ confidenceResults }) {
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+    const players = Object.keys(confidenceResults);
+    const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+
+    const sortedWeeks = React.useMemo(() => {
+        let sortableWeeks = [...weeks];
+        if (sortConfig.key !== null) {
+            sortableWeeks.sort((a, b) => {
+                const aPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === a)?.cumulativePoints || 0;
+                const bPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === b)?.cumulativePoints || 0;
+                if (aPoints < bPoints) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aPoints > bPoints) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableWeeks;
+    }, [weeks, sortConfig, confidenceResults]);
+
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    return (
+        React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
+            React.createElement("h2", { className: "text-xl font-bold text-white mb-4 p-6" }, "Cumulative Points Table"),
+            React.createElement("table", { className: "w-full" },
+                React.createElement("thead", null,
+                    React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Week"),
+                        players.map(player => 
+                            React.createElement("th", { key: player, className: "px-4 py-3 text-center text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort(player) }, 
+                                player,
+                                sortConfig.key === player && (sortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
+                            )
+                        )
+                    )
+                ),
+                React.createElement("tbody", null,
+                    sortedWeeks.map(week => (
+                        React.createElement("tr", { key: week, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                            React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, `Week ${week}`),
+                            players.map(player => (
+                                React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, 
+                                    confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.cumulativePoints || 0
                                 )
                             ))
                         )
@@ -418,7 +725,11 @@ function NFLScoresTracker() {
       });
 
       Object.keys(mockPicks).forEach(player => {
-        results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player] });
+        const previousCumulativePoints = results[player].pointsPerWeek.length > 0
+          ? results[player].pointsPerWeek[results[player].pointsPerWeek.length - 1].cumulativePoints
+          : 0;
+        const currentCumulativePoints = previousCumulativePoints + weeklyPoints[player];
+        results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player], cumulativePoints: currentCumulativePoints });
       });
     });
 
@@ -565,8 +876,10 @@ function NFLScoresTracker() {
           )
         ) : activeTab === 'chart' ? (
           React.createElement("div", null, 
-            React.createElement(Chart, { confidenceResults: confidenceResults }),
-            React.createElement(ChartTable, { confidenceResults: confidenceResults })
+            React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults }),
+            React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults }),
+            React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults }),
+            React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
           )
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
