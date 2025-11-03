@@ -99,9 +99,9 @@ function WeeklyPointsChart({ confidenceResults }) {
         // Active point
         activePoint && React.createElement("g", null,
           React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
-          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
+          React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
         ),
 
         // Legend
@@ -252,9 +252,9 @@ function CumulativePointsChart({ confidenceResults }) {
         // Active point
         activePoint && React.createElement("g", null,
           React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
-          React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.relativePoints} pts`)
+          React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.relativePoints} pts`)
         ),
 
         // Legend
