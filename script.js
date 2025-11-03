@@ -578,10 +578,8 @@ function NFLScoresTracker() {
         const currentCumulativePoints = previousCumulativePoints + weeklyPoints[player];
         results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player], cumulativePoints: currentCumulativePoints });
       });
-    });
 
-    // Calculate points relative to leader
-    weeks.forEach(weekData => {
+      // Calculate points relative to leader for the current week
       let leaderPoints = 0;
       Object.keys(mockPicks).forEach(player => {
         const weekInfo = results[player].pointsPerWeek.find(p => p.week === weekData.week);
@@ -596,6 +594,7 @@ function NFLScoresTracker() {
           weekInfo.relativePoints = weekInfo.cumulativePoints - leaderPoints;
         }
       });
+    });
 
     // Calculate remainingPossible based on the new logic
     if (selectedWeek) {
