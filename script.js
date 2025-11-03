@@ -182,14 +182,14 @@ function CumulativePointsChart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.cumulativePoints)));
+  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
 
   const chartWidth = 800;
   const chartHeight = 400;
   const padding = 50;
 
   const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
-  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+  const yScale = (points) => chartHeight - padding - ((points + maxPoints) / (maxPoints * 2)) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
 
@@ -204,12 +204,12 @@ function CumulativePointsChart({ confidenceResults }) {
     players.forEach((player, playerIndex) => {
       confidenceResults[player].pointsPerWeek.forEach(d => {
         const pointX = xScale(d.week);
-        const pointY = yScale(d.cumulativePoints);
+        const pointY = yScale(d.relativePoints);
         const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
 
         if (distance < minDistance && distance < 20) {
           minDistance = distance;
-          closestPoint = { player, week: d.week, cumulativePoints: d.cumulativePoints, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+          closestPoint = { player, week: d.week, relativePoints: d.relativePoints, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
         }
       });
     });
@@ -223,7 +223,7 @@ function CumulativePointsChart({ confidenceResults }) {
 
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
-      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points"),
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points vs. Leader"),
       React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
@@ -234,7 +234,7 @@ function CumulativePointsChart({ confidenceResults }) {
         // Y-axis
         React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
         Array.from({ length: 5 }).map((_, i) => {
-          const points = Math.round(maxPoints / 4 * i);
+          const points = Math.round(-maxPoints + (i * maxPoints / 2));
           return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
         }),
 
@@ -245,7 +245,7 @@ function CumulativePointsChart({ confidenceResults }) {
             fill: "none",
             stroke: colors[playerIndex % colors.length],
             strokeWidth: 2,
-            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.cumulativePoints)}`).join(' ')
+            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.relativePoints)}`).join(' ')
           })
         )),
 
@@ -254,7 +254,7 @@ function CumulativePointsChart({ confidenceResults }) {
           React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
           React.createElement("rect", { x: activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
           React.createElement("text", { x: activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.cumulativePoints} pts`)
+          React.createElement("text", { x: activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.relativePoints} pts`)
         ),
 
         // Legend
@@ -321,7 +321,7 @@ function CumulativePointsTable({ confidenceResults }) {
                             React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, `Week ${week}`),
                             players.map(player => (
                                 React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, 
-                                    confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.cumulativePoints || 0
+                                    confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.relativePoints || 0
                                 )
                             ))
                         )
@@ -579,6 +579,23 @@ function NFLScoresTracker() {
         results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player], cumulativePoints: currentCumulativePoints });
       });
     });
+
+    // Calculate points relative to leader
+    weeks.forEach(weekData => {
+      let leaderPoints = 0;
+      Object.keys(mockPicks).forEach(player => {
+        const weekInfo = results[player].pointsPerWeek.find(p => p.week === weekData.week);
+        if (weekInfo && weekInfo.cumulativePoints > leaderPoints) {
+          leaderPoints = weekInfo.cumulativePoints;
+        }
+      });
+
+      Object.keys(mockPicks).forEach(player => {
+        const weekInfo = results[player].pointsPerWeek.find(p => p.week === weekData.week);
+        if (weekInfo) {
+          weekInfo.relativePoints = weekInfo.cumulativePoints - leaderPoints;
+        }
+      });
 
     // Calculate remainingPossible based on the new logic
     if (selectedWeek) {
