@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'process_picks_gh.R'
+      - '.github/workflows/run_picks_extract.yml'
   schedule:
     # Thursday 02:15 AM CET (01:15 UTC in winter, 00:15 UTC in summer)
     - cron: '15 1 * * 4'
@@ -93,9 +94,9 @@ jobs:
         run: |
           git config --global user.name 'Your Name'
           git config --global user.email 'your-username@users.noreply.github.com'
-          git stash
+          #git stash
           git pull
-          git stash pop
+          #git stash pop
           git add -A
           git commit -m "save commit"
           git push --force
