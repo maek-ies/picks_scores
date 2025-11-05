@@ -27,36 +27,97 @@ const teamAbbreviations = {
 
 function WeeklyPointsChart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
-  const [chartDimensions, setChartDimensions] = useState({ width: 800, height: 400 });
-  const chartContainerRef = React.useRef(null);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        const width = chartContainerRef.current.offsetWidth;
-        setChartDimensions({ width, height: width * 0.5 });
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const { width: chartWidth, height: chartHeight } = chartDimensions;
   const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
+
+  const chartWidth = 800;
+  const chartHeight = 400;
+  const padding = 50;
+
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+  const handleMouseMove = (e) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    players.forEach((player, playerIndex) => {
+      confidenceResults[player].pointsPerWeek.forEach(d => {
+        const pointX = xScale(d.week);
+        const pointY = yScale(d.points);
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+
+        if (distance < minDistance && distance < 20) {
+          minDistance = distance;
+          closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+        }
+      });
+    });
+
+    setActivePoint(closestPoint);
+  };
+
+  const handleMouseLeave = () => {
+    setActivePoint(null);
+  };
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Points per Week"),
+      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
+        // X-axis
+        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        weeks.map(week => (
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+        )),
+
+        // Y-axis
+        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        Array.from({ length: 5 }).map((_, i) => {
+          const points = Math.round(maxPoints / 4 * i);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+        }),
+
+        // Lines
+        players.map((player, playerIndex) => (
+          React.createElement("polyline", {
+            key: player,
+            fill: "none",
+            stroke: colors[playerIndex % colors.length],
+            strokeWidth: 2,
+            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
+          })
+        )),
+
+        // Active point
+        activePoint && React.createElement("g", null,
+          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
+          React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
+        ),
+
+        // Legend
+        players.map((player, playerIndex) => (
+          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
+            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+          )
+        ))
+      )
+    )
+  );
+}
 
 function WeeklyPointsTable({ confidenceResults }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
 
@@ -85,31 +146,6 @@ function WeeklyPointsTable({ confidenceResults }) {
         }
         setSortConfig({ key, direction });
     };
-
-    if (windowWidth < 768) {
-        return (
-            React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-4 mt-6" },
-                React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Weekly Points"),
-                React.createElement("div", { className: "space-y-4" },
-                    sortedWeeks.map(week => (
-                        React.createElement("div", { key: week, className: "bg-slate-700/50 rounded-lg p-4" },
-                            React.createElement("h3", { className: "text-lg font-bold text-white mb-2" }, `Week ${week}`),
-                            React.createElement("div", { className: "grid grid-cols-2 gap-2" },
-                                players.map(player => (
-                                    React.createElement("div", { key: player, className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
-                                        React.createElement("span", { className: "text-sm font-medium text-slate-300" }, player),
-                                        React.createElement("span", { className: "text-sm font-bold text-white" }, 
-                                            confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0
-                                        )
-                                    )
-                                ))
-                            )
-                        )
-                    ))
-                )
-            )
-        );
-    }
 
     return (
         React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
@@ -144,26 +180,12 @@ function WeeklyPointsTable({ confidenceResults }) {
 
 function CumulativePointsChart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
-  const [chartDimensions, setChartDimensions] = useState({ width: 800, height: 400 });
-const chartContainerRef = React.useRef(null);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        const width = chartContainerRef.current.offsetWidth;
-        setChartDimensions({ width, height: width * 0.5 });
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const { width: chartWidth, height: chartHeight } = chartDimensions;
   const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
+
+  const chartWidth = 800;
+  const chartHeight = 400;
   const padding = 50;
 
   const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
@@ -249,13 +271,6 @@ const chartContainerRef = React.useRef(null);
 
 function CumulativePointsTable({ confidenceResults }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
 
@@ -284,31 +299,6 @@ function CumulativePointsTable({ confidenceResults }) {
         }
         setSortConfig({ key, direction });
     };
-
-    if (windowWidth < 768) {
-        return (
-            React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-4 mt-6" },
-                React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points"),
-                React.createElement("div", { className: "space-y-4" },
-                    sortedWeeks.map(week => (
-                        React.createElement("div", { key: week, className: "bg-slate-700/50 rounded-lg p-4" },
-                            React.createElement("h3", { className: "text-lg font-bold text-white mb-2" }, `Week ${week}`),
-                            React.createElement("div", { className: "grid grid-cols-2 gap-2" },
-                                players.map(player => (
-                                    React.createElement("div", { key: player, className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
-                                        React.createElement("span", { className: "text-sm font-medium text-slate-300" }, player),
-                                        React.createElement("span", { className: "text-sm font-bold text-white" }, 
-                                            confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.relativePoints || 0
-                                        )
-                                    )
-                                ))
-                            )
-                        )
-                    ))
-                )
-            )
-        );
-    }
 
     return (
         React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
@@ -343,52 +333,12 @@ function CumulativePointsTable({ confidenceResults }) {
 }
 
 function OddsTable({ weeks, selectedWeek }) {
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   if (!selectedWeek) return null;
 
   const weekData = weeks.find(w => w.week === selectedWeek);
 
   if (!weekData) {
     return React.createElement("div", { className: "text-white text-center py-10" }, "Data for this week is not available yet.");
-  }
-
-  if (windowWidth < 768) {
-    return (
-      React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-4" },
-        React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, `Odds for Week ${selectedWeek}`),
-        React.createElement("div", { className: "space-y-4" },
-          weekData.games.map(game => {
-            const homeML = game.homeMoneyLine;
-            const awayML = game.awayMoneyLine;
-            const oddsDisplay = homeML && awayML ? `Home: ${homeML} / Away: ${awayML}` : "N/A";
-            return (
-              React.createElement("div", { key: game.id, className: "bg-slate-700/50 rounded-lg p-4" },
-                React.createElement("h3", { className: "text-lg font-bold text-white mb-2" }, `${game.away} @ ${game.home}`),
-                React.createElement("div", { className: "grid grid-cols-2 gap-2" },
-                  React.createElement("div", { className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
-                    React.createElement("span", { className: "text-sm font-medium text-slate-300" }, "Win Probability"),
-                    React.createElement("span", { className: "text-sm font-bold text-white" }, 
-                      game.homeWinProbability && game.awayWinProbability ? 
-                      `Home: ${game.homeWinProbability.toFixed(1)}% / Away: ${game.awayWinProbability.toFixed(1)}%` : "N/A"
-                    )
-                  ),
-                  React.createElement("div", { className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
-                    React.createElement("span", { className: "text-sm font-medium text-slate-300" }, "Moneyline"),
-                    React.createElement("span", { className: "text-sm font-bold text-white" }, oddsDisplay)
-                  )
-                )
-              )
-            )
-          })
-        )
-      )
-    );
   }
 
   return (
@@ -436,13 +386,6 @@ function NFLScoresTracker() {
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -793,8 +736,8 @@ function NFLScoresTracker() {
   return (
     React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" },
       React.createElement("div", { className: "bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10" },
-        React.createElement("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" },
-          React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-4" },
+        React.createElement("div", { className: "max-w-7xl mx-auto px-4 py-4" },
+          React.createElement("div", { className: "flex items-center justify-between flex-wrap gap-4" },
             React.createElement("div", { className: "flex items-center gap-3" },
               React.createElement("span", null, "\uD83D\uDCFA"),
               React.createElement("div", null,
@@ -807,23 +750,23 @@ function NFLScoresTracker() {
                 )
               )
             ),
-            React.createElement("div", { className: "flex flex-col sm:flex-row gap-2" },
-              React.createElement("button", { onClick: () => setUseMockData(!useMockData), className: `w-full sm:w-auto px-3 py-2 text-sm rounded-lg transition-colors ${
+            React.createElement("div", { className: "flex gap-2" },
+              React.createElement("button", { onClick: () => setUseMockData(!useMockData), className: `px-3 py-2 text-sm rounded-lg transition-colors ${
                   useMockData 
                     ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
                     : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                 }` },
                 useMockData ? "Using Mock Data" : "Using Live Data"
               ),
-              React.createElement("button", { onClick: fetchScores, className: "w-full sm:w-auto px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
+              React.createElement("button", { onClick: fetchScores, className: "px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
                 "Refresh Scores"
               ),
-              React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "w-full sm:w-auto bg-slate-700 text-white rounded-lg px-3 py-2" },
+              React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
               )
             )
           ),
-          React.createElement("div", { className: "flex flex-wrap gap-2 mt-4" },
+          React.createElement("div", { className: "flex gap-2 mt-4" },
             React.createElement("button", {
               onClick: () => setActiveTab('confidence'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -838,7 +781,9 @@ function NFLScoresTracker() {
             React.createElement("button", {
               onClick: () => setActiveTab('scores'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'scores' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                activeTab === 'scores'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
               "Scores"
@@ -930,7 +875,7 @@ function NFLScoresTracker() {
             confidenceView === 'overview' ? (
               React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
                 React.createElement("div", { className: "overflow-x-auto" },
-                  React.createElement("table", { className: "min-w-full divide-y divide-slate-700" },
+                  React.createElement("table", { className: "w-full" },
                     React.createElement("thead", null,
                       React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
