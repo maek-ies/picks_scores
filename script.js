@@ -494,7 +494,7 @@ function NFLScoresTracker() {
 
               const gameStatus = game.status;
 
-              if (gameStatus === 'scheduled') {
+              if (gameStatus === 'scheduled' || gameStatus === 'pre') {
                   // For games that have not started, use the predictor
                   if (summaryData.predictor && summaryData.predictor.homeTeam && summaryData.predictor.awayTeam) {
                       homeWinProbability = summaryData.predictor.homeTeam.gameProjection * 100;
