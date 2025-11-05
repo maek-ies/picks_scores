@@ -332,30 +332,31 @@ function CumulativePointsTable({ confidenceResults }) {
     );
 }
 
-function OddsTable({ weeks, selectedWeek, oddsData }) {
+function OddsTable({ weeks, selectedWeek }) {
   if (!selectedWeek) return null;
 
-  const nextWeek = selectedWeek + 1;
-  const nextWeekData = weeks.find(w => w.week === nextWeek);
+  const weekData = weeks.find(w => w.week === selectedWeek);
 
-  if (!nextWeekData) {
-    return React.createElement("div", { className: "text-white text-center py-10" }, "Data for the next week is not available yet.");
+  if (!weekData) {
+    return React.createElement("div", { className: "text-white text-center py-10" }, "Data for this week is not available yet.");
   }
 
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
-      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Odds for Week ${nextWeek}`),
+      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Odds for Week ${selectedWeek}`),
       React.createElement("table", { className: "w-full" },
         React.createElement("thead", null,
           React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Probability"),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Odds")
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Moneyline")
           )
         ),
         React.createElement("tbody", null,
-          nextWeekData.games.map(game => {
-            const odds = oddsData[game.id];
+          weekData.games.map(game => {
+            const homeML = game.homeMoneyLine;
+            const awayML = game.awayMoneyLine;
+            const oddsDisplay = homeML && awayML ? `Home: ${homeML} / Away: ${awayML}` : "N/A";
             return (
               React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
                 React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
@@ -363,7 +364,7 @@ function OddsTable({ weeks, selectedWeek, oddsData }) {
                   game.homeWinProbability && game.awayWinProbability ? 
                   `Home: ${game.homeWinProbability.toFixed(1)}% / Away: ${game.awayWinProbability.toFixed(1)}%` : "N/A"
                 ),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, odds ? `${odds.details} (O/U: ${odds.overUnder})` : "N/A")
+                React.createElement("td", { className: "px-4 py-3 text-white" }, oddsDisplay)
               )
             )
           })
@@ -385,7 +386,6 @@ function NFLScoresTracker() {
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
-  const [oddsData, setOddsData] = useState({});
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -424,7 +424,15 @@ function NFLScoresTracker() {
 
         setWeeks(weeksResponse);
         if (weeksResponse.length > 0 && !selectedWeek) {
-          setSelectedWeek(weeksResponse[weeksResponse.length - 1].week);
+          const seasonOrigin = new Date('2025-09-04');
+          const today = new Date();
+          seasonOrigin.setHours(0,0,0,0);
+          today.setHours(0,0,0,0);
+          const dayDiff = (today - seasonOrigin) / (1000 * 60 * 60 * 24);
+          const currentWeek = Math.ceil((dayDiff + 1) / 7);
+          const maxWeek = weeksResponse[weeksResponse.length - 1].week;
+          const defaultWeek = Math.max(1, Math.min(currentWeek, maxWeek));
+          setSelectedWeek(defaultWeek);
         }
 
         const transformedPicks = {};
@@ -441,7 +449,7 @@ function NFLScoresTracker() {
         setMockPicks(transformedPicks);
 
       } else {
-        const weekPromises = Array.from({ length: 9 }, (_, i) => i + 1).map(weekNum =>
+        const weekPromises = Array.from({ length: 18 }, (_, i) => i + 1).map(weekNum =>
           fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNum}`)
             .then(res => res.json())
             .then(data => ({ week: weekNum, games: transformEspnData(data) }))
@@ -449,7 +457,15 @@ function NFLScoresTracker() {
         const allWeeks = await Promise.all(weekPromises);
         setWeeks(allWeeks);
         if (allWeeks.length > 0 && !selectedWeek) {
-          setSelectedWeek(allWeeks[allWeeks.length - 1].week);
+          const seasonOrigin = new Date('2025-09-04');
+          const today = new Date();
+          seasonOrigin.setHours(0,0,0,0);
+          today.setHours(0,0,0,0);
+          const dayDiff = (today - seasonOrigin) / (1000 * 60 * 60 * 24);
+          const currentWeek = Math.ceil((dayDiff + 1) / 7);
+          const maxWeek = allWeeks[allWeeks.length - 1].week;
+          const defaultWeek = Math.max(1, Math.min(currentWeek, maxWeek));
+          setSelectedWeek(defaultWeek);
         }
 
         // Fetch win probabilities for all games across all weeks
@@ -464,6 +480,17 @@ function NFLScoresTracker() {
 
               let homeWinProbability = null;
               let awayWinProbability = null;
+              let homeMoneyLine = null;
+              let awayMoneyLine = null;
+
+              if (summaryData.pickcenter && summaryData.pickcenter.length > 0 && summaryData.pickcenter[0].moneyline) {
+                  if(summaryData.pickcenter[0].moneyline.home && summaryData.pickcenter[0].moneyline.home.close) {
+                      homeMoneyLine = summaryData.pickcenter[0].moneyline.home.close.odds;
+                  }
+                  if(summaryData.pickcenter[0].moneyline.away && summaryData.pickcenter[0].moneyline.away.close) {
+                      awayMoneyLine = summaryData.pickcenter[0].moneyline.away.close.odds;
+                  }
+              }
 
               if (summaryData.winprobability && summaryData.winprobability.length > 0) {
                 const winProbabilities = summaryData.winprobability;
@@ -482,7 +509,7 @@ function NFLScoresTracker() {
               }
               console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
-              return { ...game, homeWinProbability, awayWinProbability };
+              return { ...game, homeWinProbability, awayWinProbability, homeMoneyLine, awayMoneyLine };
             } catch (summaryError) {
               console.error(`Error fetching summary for game ${game.id}:`, summaryError);
               return game; // Return original game if summary fetch fails
@@ -499,32 +526,6 @@ function NFLScoresTracker() {
           })
         }));
         setWeeks(updatedWeeks);
-
-        // Fetch odds for the next week
-        if (selectedWeek) {
-          const nextWeek = selectedWeek + 1;
-          const nextWeekData = updatedWeeks.find(w => w.week === nextWeek);
-          if (nextWeekData) {
-            const oddsPromises = nextWeekData.games.map(async (game) => {
-              try {
-                const oddsResponse = await fetch(`https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/${game.id}/competitions/${game.id}/odds`);
-                const oddsData = await oddsResponse.json();
-                return { gameId: game.id, odds: oddsData.items[0] }; // Assuming the structure
-              } catch (oddsError) {
-                console.error(`Error fetching odds for game ${game.id}:`, oddsError);
-                return { gameId: game.id, odds: null };
-              }
-            });
-            const allOdds = await Promise.all(oddsPromises);
-            const newOddsData = allOdds.reduce((acc, data) => {
-              if (data.odds) {
-                acc[data.gameId] = { details: data.odds.details, overUnder: data.odds.overUnder };
-              }
-              return acc;
-            }, {});
-            setOddsData(newOddsData);
-          }
-        }
 
         // When using live data, we still need mock picks
         const picksResponse = await fetch('picks.json').then(res => res.json());
@@ -823,7 +824,7 @@ function NFLScoresTracker() {
             React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
           )
         ) : activeTab === 'odds' ? (
-          React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek, oddsData: oddsData })
+          React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
             React.createElement("div", { className: "flex items-center justify-between mb-6" },
