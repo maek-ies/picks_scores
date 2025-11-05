@@ -492,20 +492,28 @@ function NFLScoresTracker() {
                   }
               }
 
-              if (summaryData.winprobability && summaryData.winprobability.length > 0) {
-                const winProbabilities = summaryData.winprobability;
+              const gameStatus = game.status;
 
-                if (game.status === 'post') {
-                  homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
-                  awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
-                } else if (game.status === 'in' || game.status === 'live') {
-                  const latestWinProbability = winProbabilities[winProbabilities.length - 1];
-                  homeWinProbability = latestWinProbability.homeWinPercentage * 100;
-                  awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
-                }
-              } else if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
-                homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection * 100;
-                awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection * 100;
+              if (gameStatus === 'scheduled') {
+                  // For games that have not started, use the predictor
+                  if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
+                      homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection * 100;
+                      awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection * 100;
+                  }
+              } else { // Game is 'in', 'live', 'post', or other state
+                  // For other states, use the winprobability array as it was before
+                  if (summaryData.winprobability && summaryData.winprobability.length > 0) {
+                      const winProbabilities = summaryData.winprobability;
+              
+                      if (game.status === 'post') {
+                          homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
+                          awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
+                      } else if (game.status === 'in' || game.status === 'live') {
+                          const latestWinProbability = winProbabilities[winProbabilities.length - 1];
+                          homeWinProbability = latestWinProbability.homeWinPercentage * 100;
+                          awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
+                      }
+                  }
               }
               console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
