@@ -27,12 +27,25 @@ const teamAbbreviations = {
 
 function WeeklyPointsChart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
+  const [chartDimensions, setChartDimensions] = useState({ width: 800, height: 400 });
+  const chartContainerRef = React.useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        const width = chartContainerRef.current.offsetWidth;
+        setChartDimensions({ width, height: width * 0.5 });
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
-
-  const chartWidth = 800;
-  const chartHeight = 400;
+const { width: chartWidth, height: chartHeight } = chartDimensions;
   const padding = 50;
 
   const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
@@ -118,6 +131,13 @@ function WeeklyPointsChart({ confidenceResults }) {
 
 function WeeklyPointsTable({ confidenceResults }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
 
@@ -146,6 +166,31 @@ function WeeklyPointsTable({ confidenceResults }) {
         }
         setSortConfig({ key, direction });
     };
+
+    if (windowWidth < 768) {
+        return (
+            React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-4 mt-6" },
+                React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Weekly Points"),
+                React.createElement("div", { className: "space-y-4" },
+                    sortedWeeks.map(week => (
+                        React.createElement("div", { key: week, className: "bg-slate-700/50 rounded-lg p-4" },
+                            React.createElement("h3", { className: "text-lg font-bold text-white mb-2" }, `Week ${week}`),
+                            React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+                                players.map(player => (
+                                    React.createElement("div", { key: player, className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
+                                        React.createElement("span", { className: "text-sm font-medium text-slate-300" }, player),
+                                        React.createElement("span", { className: "text-sm font-bold text-white" }, 
+                                            confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0
+                                        )
+                                    )
+                                ))
+                            )
+                        )
+                    ))
+                )
+            )
+        );
+    }
 
     return (
         React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
@@ -180,12 +225,27 @@ function WeeklyPointsTable({ confidenceResults }) {
 
 function CumulativePointsChart({ confidenceResults }) {
   const [activePoint, setActivePoint] = useState(null);
+  const [chartDimensions, setChartDimensions] = useState({ width: 800, height: 400 });
+const chartContainerRef = React.useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        const width = chartContainerRef.current.offsetWidth;
+        setChartDimensions({ width, height: width * 0.5 });
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
   const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
 
-  const chartWidth = 800;
-  const chartHeight = 400;
+  const { width: chartWidth, height: chartHeight } = chartDimensions;
   const padding = 50;
 
   const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
@@ -271,6 +331,13 @@ function CumulativePointsChart({ confidenceResults }) {
 
 function CumulativePointsTable({ confidenceResults }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
 
@@ -299,6 +366,31 @@ function CumulativePointsTable({ confidenceResults }) {
         }
         setSortConfig({ key, direction });
     };
+
+    if (windowWidth < 768) {
+        return (
+            React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-4 mt-6" },
+                React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points"),
+                React.createElement("div", { className: "space-y-4" },
+                    sortedWeeks.map(week => (
+                        React.createElement("div", { key: week, className: "bg-slate-700/50 rounded-lg p-4" },
+                            React.createElement("h3", { className: "text-lg font-bold text-white mb-2" }, `Week ${week}`),
+                            React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+                                players.map(player => (
+                                    React.createElement("div", { key: player, className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
+                                        React.createElement("span", { className: "text-sm font-medium text-slate-300" }, player),
+                                        React.createElement("span", { className: "text-sm font-bold text-white" }, 
+                                            confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.relativePoints || 0
+                                        )
+                                    )
+                                ))
+                            )
+                        )
+                    ))
+                )
+            )
+        );
+    }
 
     return (
         React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
@@ -333,12 +425,52 @@ function CumulativePointsTable({ confidenceResults }) {
 }
 
 function OddsTable({ weeks, selectedWeek }) {
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   if (!selectedWeek) return null;
 
   const weekData = weeks.find(w => w.week === selectedWeek);
 
   if (!weekData) {
     return React.createElement("div", { className: "text-white text-center py-10" }, "Data for this week is not available yet.");
+  }
+
+  if (windowWidth < 768) {
+    return (
+      React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-4" },
+        React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, `Odds for Week ${selectedWeek}`),
+        React.createElement("div", { className: "space-y-4" },
+          weekData.games.map(game => {
+            const homeML = game.homeMoneyLine;
+            const awayML = game.awayMoneyLine;
+            const oddsDisplay = homeML && awayML ? `Home: ${homeML} / Away: ${awayML}` : "N/A";
+            return (
+              React.createElement("div", { key: game.id, className: "bg-slate-700/50 rounded-lg p-4" },
+                React.createElement("h3", { className: "text-lg font-bold text-white mb-2" }, `${game.away} @ ${game.home}`),
+                React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+                  React.createElement("div", { className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
+                    React.createElement("span", { className: "text-sm font-medium text-slate-300" }, "Win Probability"),
+                    React.createElement("span", { className: "text-sm font-bold text-white" }, 
+                      game.homeWinProbability && game.awayWinProbability ? 
+                      `Home: ${game.homeWinProbability.toFixed(1)}% / Away: ${game.awayWinProbability.toFixed(1)}%` : "N/A"
+                    )
+                  ),
+                  React.createElement("div", { className: "flex justify-between items-center bg-slate-600/50 p-2 rounded" },
+                    React.createElement("span", { className: "text-sm font-medium text-slate-300" }, "Moneyline"),
+                    React.createElement("span", { className: "text-sm font-bold text-white" }, oddsDisplay)
+                  )
+                )
+              )
+            )
+          })
+        )
+      )
+    );
   }
 
   return (
@@ -386,6 +518,13 @@ function NFLScoresTracker() {
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -736,8 +875,8 @@ function NFLScoresTracker() {
   return (
     React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" },
       React.createElement("div", { className: "bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10" },
-        React.createElement("div", { className: "max-w-7xl mx-auto px-4 py-4" },
-          React.createElement("div", { className: "flex items-center justify-between flex-wrap gap-4" },
+        React.createElement("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" },
+          React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-4" },
             React.createElement("div", { className: "flex items-center gap-3" },
               React.createElement("span", null, "\uD83D\uDCFA"),
               React.createElement("div", null,
@@ -750,23 +889,23 @@ function NFLScoresTracker() {
                 )
               )
             ),
-            React.createElement("div", { className: "flex gap-2" },
-              React.createElement("button", { onClick: () => setUseMockData(!useMockData), className: `px-3 py-2 text-sm rounded-lg transition-colors ${
+            React.createElement("div", { className: "flex flex-col sm:flex-row gap-2" },
+              React.createElement("button", { onClick: () => setUseMockData(!useMockData), className: `w-full sm:w-auto px-3 py-2 text-sm rounded-lg transition-colors ${
                   useMockData 
                     ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
                     : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                 }` },
                 useMockData ? "Using Mock Data" : "Using Live Data"
               ),
-              React.createElement("button", { onClick: fetchScores, className: "px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
+              React.createElement("button", { onClick: fetchScores, className: "w-full sm:w-auto px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
                 "Refresh Scores"
               ),
-              React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
+              React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "w-full sm:w-auto bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
               )
             )
           ),
-          React.createElement("div", { className: "flex gap-2 mt-4" },
+          React.createElement("div", { className: "flex flex-wrap gap-2 mt-4" },
             React.createElement("button", {
               onClick: () => setActiveTab('confidence'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -781,8 +920,51 @@ function NFLScoresTracker() {
             React.createElement("button", {
               onClick: () => setActiveTab('scores'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'scores'
-                  ? 'bg-blue-600 text-white'
+                activeTab === 'scores' ? (
+                          windowWidth < 768 ? (
+                            React.createElement("div", { className: "space-y-4" },
+                              (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
+                                const live = isLive(game);
+                                const status = getGameStatus(game);
+                                const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
+                                return (
+                                  React.createElement("div",
+                                    { key: game.id,
+                                    className: `bg-slate-800/50 rounded-lg border ${live ? 'border-green-500' : 'border-slate-700'} overflow-hidden`
+                                  },
+                                    React.createElement("div", { className: `px-2 py-1 text-xs font-semibold text-center flex items-center justify-center gap-2 ${live ? 'bg-green-500 text-white' : 'bg-slate-700/50 text-slate-300'}` },
+                                      live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
+                                      status,
+                                      (status === 'FINAL' || status === 'LIVE') && game.date && React.createElement("span", null, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })),
+                                      live && game.displayClock && game.period && React.createElement("span", null, `Q${game.period} - ${game.displayClock.split(' - ')[0]}`),
+                                      !live && status === 'Scheduled' && game.date && React.createElement("span", null, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })),
+                                      isGameOfTheWeek && (
+                                        React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GOTW")
+                                      )
+                                    ),
+                                    React.createElement("div", { className: "p-3" },
+                                      React.createElement("div", { className: "flex items-center justify-between mb-2" },
+                                        React.createElement("div", { className: "flex items-center gap-3 flex-1" },
+                                          React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
+                                          React.createElement("span", { className: "text-white font-semibold" }, game.away),
+                                          game.awayWinProbability && (isLive(game) || (game.status === 'final' || game.status === 'post')) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
+                                        ),
+                                        React.createElement("span", { className: "text-2xl font-bold text-white" }, game.awayScore)
+                                      ),
+                                      React.createElement("div", { className: "flex items-center justify-between" },
+                                        React.createElement("div", { className: "flex items-center gap-3 flex-1" },
+                                          React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
+                                          React.createElement("span", { className: "text-white font-semibold" }, game.home),
+                                          game.homeWinProbability && (isLive(game) || (game.status === 'final' || game.status === 'post')) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
+                                        ),
+                                        React.createElement("span", { className: "text-2xl font-bold text-white" }, game.homeScore)
+                                      )
+                                    )
+                                  )
+                                );
+                              })
+                            )
+                          ) : 'bg-blue-600 text-white'
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
@@ -879,8 +1061,8 @@ function NFLScoresTracker() {
                     React.createElement("thead", null,
                       React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm hidden md:table-cell" }, "Result"),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm hidden lg:table-cell" }, "Win Prob."),
                         leaderboard.map(([player, data], idx) => {
                           const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                           const pointsBehind = firstPlacePoints - data.total;
@@ -918,7 +1100,7 @@ function NFLScoresTracker() {
                                 )
                               )
                             ),
-                            React.createElement("td", { className: "px-4 py-3" },
+                            React.createElement("td", { className: "px-4 py-3 hidden md:table-cell" },
                               React.createElement("div", { className: "text-sm" },
                                 game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
                                   React.createElement("span", { className: "text-white font-semibold" }, 
@@ -935,7 +1117,7 @@ function NFLScoresTracker() {
                                 )
                               )
                             ),
-                            React.createElement("td", { className: "px-4 py-3" },
+                            React.createElement("td", { className: "px-4 py-3 hidden lg:table-cell" },
                               game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
                                 React.createElement("div", { className: "text-sm" },
                                   React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
