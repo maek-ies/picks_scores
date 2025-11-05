@@ -45,89 +45,8 @@ function WeeklyPointsChart({ confidenceResults }) {
   }, []);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-const { width: chartWidth, height: chartHeight } = chartDimensions;
-  const padding = 50;
-
-  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
-  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
-
-  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
-
-  const handleMouseMove = (e) => {
-    const svgRect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - svgRect.left;
-    const y = e.clientY - svgRect.top;
-
-    let closestPoint = null;
-    let minDistance = Infinity;
-
-    players.forEach((player, playerIndex) => {
-      confidenceResults[player].pointsPerWeek.forEach(d => {
-        const pointX = xScale(d.week);
-        const pointY = yScale(d.points);
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-
-        if (distance < minDistance && distance < 20) {
-          minDistance = distance;
-          closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
-        }
-      });
-    });
-
-    setActivePoint(closestPoint);
-  };
-
-  const handleMouseLeave = () => {
-    setActivePoint(null);
-  };
-
-  return (
-    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
-      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Points per Week"),
-      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
-        // X-axis
-        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
-        weeks.map(week => (
-          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
-        )),
-
-        // Y-axis
-        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
-        Array.from({ length: 5 }).map((_, i) => {
-          const points = Math.round(maxPoints / 4 * i);
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
-        }),
-
-        // Lines
-        players.map((player, playerIndex) => (
-          React.createElement("polyline", {
-            key: player,
-            fill: "none",
-            stroke: colors[playerIndex % colors.length],
-            strokeWidth: 2,
-            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
-          })
-        )),
-
-        // Active point
-        activePoint && React.createElement("g", null,
-          React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
-          React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
-        ),
-
-        // Legend
-        players.map((player, playerIndex) => (
-          React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
-            React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
-            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
-          )
-        ))
-      )
-    )
-  );
-}
+  const { width: chartWidth, height: chartHeight } = chartDimensions;
+  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
 
 function WeeklyPointsTable({ confidenceResults }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
@@ -243,9 +162,8 @@ const chartContainerRef = React.useRef(null);
   }, []);
   const players = Object.keys(confidenceResults);
   const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
-
   const { width: chartWidth, height: chartHeight } = chartDimensions;
+  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
   const padding = 50;
 
   const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
@@ -1012,12 +930,12 @@ function NFLScoresTracker() {
             confidenceView === 'overview' ? (
               React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
                 React.createElement("div", { className: "overflow-x-auto" },
-                  React.createElement("table", { className: "w-full" },
+                  React.createElement("table", { className: "min-w-full divide-y divide-slate-700" },
                     React.createElement("thead", null,
                       React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm hidden md:table-cell" }, "Result"),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm hidden lg:table-cell" }, "Win Prob."),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
                         leaderboard.map(([player, data], idx) => {
                           const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                           const pointsBehind = firstPlacePoints - data.total;
@@ -1055,7 +973,7 @@ function NFLScoresTracker() {
                                 )
                               )
                             ),
-                            React.createElement("td", { className: "px-4 py-3 hidden md:table-cell" },
+                            React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-sm" },
                                 game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
                                   React.createElement("span", { className: "text-white font-semibold" }, 
@@ -1072,7 +990,7 @@ function NFLScoresTracker() {
                                 )
                               )
                             ),
-                            React.createElement("td", { className: "px-4 py-3 hidden lg:table-cell" },
+                            React.createElement("td", { className: "px-4 py-3" },
                               game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
                                 React.createElement("div", { className: "text-sm" },
                                   React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
