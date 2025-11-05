@@ -496,9 +496,9 @@ function NFLScoresTracker() {
 
               if (gameStatus === 'scheduled') {
                   // For games that have not started, use the predictor
-                  if (summaryData.gameInfo && summaryData.gameInfo.predictor && summaryData.gameInfo.predictor.homeTeam && summaryData.gameInfo.predictor.awayTeam) {
-                      homeWinProbability = summaryData.gameInfo.predictor.homeTeam.gameProjection * 100;
-                      awayWinProbability = summaryData.gameInfo.predictor.awayTeam.gameProjection * 100;
+                  if (summaryData.predictor && summaryData.predictor.homeTeam && summaryData.predictor.awayTeam) {
+                      homeWinProbability = summaryData.predictor.homeTeam.gameProjection * 100;
+                      awayWinProbability = summaryData.predictor.awayTeam.gameProjection * 100;
                   }
               } else { // Game is 'in', 'live', 'post', or other state
                   // For other states, use the winprobability array as it was before
