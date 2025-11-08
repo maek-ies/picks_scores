@@ -374,6 +374,41 @@ function OddsTable({ weeks, selectedWeek }) {
   );
 }
 
+function DeviationTable({ deviationData, weeks, selectedWeek }) {
+  if (!selectedWeek) return null;
+
+  const weekData = weeks.find(w => w.week === selectedWeek);
+
+  if (!weekData) {
+    return React.createElement("div", { className: "text-white text-center py-10" }, "Data for this week is not available yet.");
+  }
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
+      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Average Deviation for Week ${selectedWeek}`),
+      React.createElement("table", { className: "w-full" },
+        React.createElement("thead", null,
+          React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Average Deviation")
+          )
+        ),
+        React.createElement("tbody", null,
+          weekData.games.map(game => {
+            const deviation = deviationData.find(d => d.gameId === game.id);
+            return (
+              React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, deviation ? deviation.avgDeviation.toFixed(2) : "N/A")
+              )
+            )
+          })
+        )
+      )
+    )
+  );
+}
+
 function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(undefined);
@@ -386,6 +421,7 @@ function NFLScoresTracker() {
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
+  const [deviationData, setDeviationData] = useState([]);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -472,11 +508,8 @@ function NFLScoresTracker() {
         const allGamesWithSummaryPromises = allWeeks.flatMap(weekData =>
           weekData.games.map(async (game) => {
             try {
-              console.log(`Fetching summary for game ID: ${game.id}`);
               const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
               const summaryData = await summaryResponse.json();
-              console.log(`Summary data for game ${game.id}:`, summaryData);
-              console.log(`Game ${game.id} status: ${game.status}`);
 
               let homeWinProbability = null;
               let awayWinProbability = null;
@@ -515,11 +548,9 @@ function NFLScoresTracker() {
                       }
                   }
               }
-              console.log(`Assigned Win Probabilities for game ${game.id}: Home - ${homeWinProbability}, Away - ${awayWinProbability}`);
 
               return { ...game, homeWinProbability, awayWinProbability, homeMoneyLine, awayMoneyLine };
             } catch (summaryError) {
-              console.error(`Error fetching summary for game ${game.id}:`, summaryError);
               return game; // Return original game if summary fetch fails
             }
           })
@@ -568,6 +599,12 @@ function NFLScoresTracker() {
 
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [useMockData]); // Re-run if useMockData changes
+
+  useEffect(() => {
+    if (weeks.length > 0 && Object.keys(mockPicks).length > 0) {
+      calculateDeviation();
+    }
+  }, [weeks, mockPicks]); // Re-run if weeks or mockPicks changes
 
   const calculateConfidencePoints = () => {
     const results = {};
@@ -676,8 +713,6 @@ function NFLScoresTracker() {
     // Calculate remainingPossible based on the new logic
     if (selectedWeek) {
       const selectedWeekData = weeks.find(w => w.week === selectedWeek);
-      console.log('Debug: selectedWeek', selectedWeek);
-      console.log('Debug: selectedWeekData', selectedWeekData);
       if (selectedWeekData) {
         const numberOfGamesInWeek = selectedWeekData.games.length;
         const maxPossiblePointsForWeek = (numberOfGamesInWeek / 2) * (1 + numberOfGamesInWeek) + 5; // Global for the week
@@ -705,6 +740,39 @@ function NFLScoresTracker() {
     }
 
     return results;
+  };
+
+  const calculateDeviation = () => {
+    const deviationResults = [];
+    weeks.forEach(weekData => {
+      weekData.games.forEach(game => {
+        const players = Object.keys(mockPicks);
+        const gamePicks = [];
+        let sumRelConf = 0;
+
+        players.forEach(player => {
+          const pick = mockPicks[player].find(p => p.gameId === game.id);
+          if (pick) {
+            const pickAbbreviation = teamAbbreviations[pick.pick] || pick.pick;
+            const relConf = pickAbbreviation === game.home ? pick.confidence : -1 * pick.confidence;
+            gamePicks.push({ player, relConf });
+            sumRelConf += relConf;
+          }
+        });
+
+        if (gamePicks.length > 1) {
+          let sumOfDeviations = 0;
+          gamePicks.forEach(pick => {
+            const avgConfOthers = (sumRelConf - pick.relConf) / (gamePicks.length - 1);
+            const deviation = Math.abs(pick.relConf - avgConfOthers);
+            sumOfDeviations += deviation;
+          });
+          const avgDeviation = sumOfDeviations / gamePicks.length;
+          deviationResults.push({ gameId: game.id, avgDeviation });
+        }
+      });
+    });
+    setDeviationData(deviationResults);
   };
 
   const getGameStatus = (game) => {
@@ -807,6 +875,16 @@ function NFLScoresTracker() {
               }`
             },
               "Odds"
+            ),
+            React.createElement("button", {
+              onClick: () => setActiveTab('deviation'),
+              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'deviation'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`
+            },
+              "Deviation"
             )
           )
         )
@@ -820,7 +898,7 @@ function NFLScoresTracker() {
         loading ? (
           React.createElement("div", { className: "flex items-center justify-center py-20" },
             React.createElement("div", { className: "text-center" },
-              React.createElement("span", { className: "w-12 h-12 text-blue-400 animate-spin mx-auto mb-4" }, "\u21BB"),
+              React.createElement("span", { className: "w-12 h-12 text-blue-400 animate-spin mx-auto mb-4" }, "🔄"),
               React.createElement("p", { className: "text-slate-300" }, "Loading...")
             )
           )
@@ -833,6 +911,8 @@ function NFLScoresTracker() {
           )
         ) : activeTab === 'odds' ? (
           React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
+        ) : activeTab === 'deviation' ? (
+          React.createElement(DeviationTable, { deviationData: deviationData, weeks: weeks, selectedWeek: selectedWeek })
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
             React.createElement("div", { className: "flex items-center justify-between mb-6" },
