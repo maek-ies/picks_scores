@@ -387,7 +387,7 @@ function NFLScoresTracker() {
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
   const [deviationData, setDeviationData] = useState([]);
   const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
-  const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -767,6 +767,15 @@ function NFLScoresTracker() {
   const leaderboard = Object.entries(confidenceResults)
     .sort((a, b) => b[1].total - a[1].total);
 
+  const requestPlayerSort = (key) => {
+    let direction = 'ascending';
+    if (playerSortConfig.key === key && playerSortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setPlayerSortConfig({ key, direction });
+    setDeviationSortConfig({ key: null, direction: 'ascending' });
+  };
+
   return (
     React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" },
       React.createElement("div", { className: "bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10" },
@@ -901,7 +910,10 @@ function NFLScoresTracker() {
                       React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
                       React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
                       React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
-                      React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' })) },
+                      React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => {
+                        setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' }));
+                        setPlayerSortConfig({ key: null, direction: 'ascending' });
+                      }},
                           "Dev",
                           deviationSortConfig.key === 'dev' && (deviationSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
                       ),
@@ -909,8 +921,8 @@ function NFLScoresTracker() {
                         const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                         const pointsBehind = firstPlacePoints - data.total;
                         return (
-                          React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700" },
-                            React.createElement("div", { className: "text-white font-semibold text-sm" }, player),
+                          React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700 cursor-pointer", onClick: () => requestPlayerSort(player) },
+                            React.createElement("div", { className: "text-white font-semibold text-sm" }, player, playerSortConfig.key === player && (playerSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')),
                             React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
                             idx === 0 ? React.createElement("div", { className: "text-xs text-green-400" }, "Leader") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
                             React.createElement("div", { className: "text-slate-400 text-xs" }, `This Week: ${data.weekly}`),
@@ -922,6 +934,19 @@ function NFLScoresTracker() {
                   ),
                   React.createElement("tbody", null,
                                       (displayedWeek ? [...displayedWeek.games].sort((a, b) => {
+                                        if (playerSortConfig.key) {
+                                          const player = playerSortConfig.key;
+                                          const aConfidence = confidenceResults[player]?.details.find(d => d.gameId === a.id)?.confidence || 0;
+                                          const bConfidence = confidenceResults[player]?.details.find(d => d.gameId === b.id)?.confidence || 0;
+                                  
+                                          if (aConfidence < bConfidence) {
+                                              return playerSortConfig.direction === 'ascending' ? -1 : 1;
+                                          }
+                                          if (aConfidence > bConfidence) {
+                                              return playerSortConfig.direction === 'ascending' ? 1 : -1;
+                                          }
+                                        }
+
                                         const aIsLive = isLive(a);
                                         const bIsLive = isLive(b);
 
