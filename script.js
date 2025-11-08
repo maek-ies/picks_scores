@@ -909,7 +909,6 @@ function NFLScoresTracker() {
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                       React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "Game"),
                       React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "Result"),
-                      React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "WP"),
                       React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => {
                         setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' }));
                         setPlayerSortConfig({ key: null, direction: 'ascending' });
@@ -975,7 +974,12 @@ function NFLScoresTracker() {
                               isGameOfTheWeek && (
                                 React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
                               )
-                            )
+                            ),
+                            game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
+                                React.createElement("div", { className: "text-xs text-slate-400" },
+                                    `${game.home}: ${game.homeWinProbability.toFixed(1)}% / ${game.away}: ${game.awayWinProbability.toFixed(1)}%`
+                                )
+                            ) : null
                           ),
                           React.createElement("td", { className: "px-2 py-3" },
                             React.createElement("div", { className: "text-sm" },
@@ -992,16 +996,6 @@ function NFLScoresTracker() {
                                   React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
                                 )
                               )
-                            )
-                          ),
-                          React.createElement("td", { className: "px-2 py-3" },
-                            game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
-                              React.createElement("div", { className: "text-sm" },
-                                React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
-                                React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
-                              )
-                            ) : (
-                              React.createElement("span", { className: "text-slate-400" }, "N/A")
                             )
                           ),
                           React.createElement("td", { className: "px-2 py-3 text-white" },
