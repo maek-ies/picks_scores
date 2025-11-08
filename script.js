@@ -380,13 +380,13 @@ function NFLScoresTracker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [activeTab, setActiveTab] = useState('confidence');
-  const [confidenceView, setConfidenceView] = useState('overview');
+  const [activeTab, setActiveTab] = useState('week-overview');
   const [includeLiveGames, setIncludeLiveGames] = useState(true);
   const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
   const [deviationData, setDeviationData] = useState([]);
+  const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
   const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
 
   const transformEspnData = (data) => {
@@ -802,15 +802,15 @@ function NFLScoresTracker() {
           ),
           React.createElement("div", { className: "flex gap-2 mt-4" },
             React.createElement("button", {
-              onClick: () => setActiveTab('confidence'),
+              onClick: () => setActiveTab('week-overview'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                activeTab === 'confidence'
+                activeTab === 'week-overview'
                   ? 'bg-blue-600 text-white'
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              React.createElement("span", null, "\uD83C\uDFC6"),
-              "Confidence Pool"
+              React.createElement("span", null, "\uD83D\uDDB7"),
+              "Week Overview"
             ),
             React.createElement("button", {
               onClick: () => setActiveTab('scores'),
@@ -841,6 +841,17 @@ function NFLScoresTracker() {
               }`
             },
               "Odds"
+            ),
+            React.createElement("button", {
+              onClick: () => setActiveTab('leaderboard'),
+              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'leaderboard'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`
+            },
+              React.createElement("span", null, "\uD83C\uDFC6"),
+              "Leaderboard"
             )
           )
         )
@@ -867,33 +878,9 @@ function NFLScoresTracker() {
           )
         ) : activeTab === 'odds' ? (
           React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
-        ) : activeTab === 'confidence' ? (
+        ) : activeTab === 'week-overview' ? (
           React.createElement("div", null,
-            React.createElement("div", { className: "flex items-center justify-between mb-6" },
-              React.createElement("div", { className: "flex gap-2" },
-                React.createElement("button", {
-                  onClick: () => setConfidenceView('overview'),
-                  className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    confidenceView === 'overview'
-                      ? 'bg-slate-700 text-white'
-                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
-                  }`
-                },
-                  React.createElement("span", null, "\uD83D\uDDB7"),
-                  "Overview Table"
-                ),
-                React.createElement("button", {
-                  onClick: () => setConfidenceView('leaderboard'),
-                  className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    confidenceView === 'leaderboard'
-                      ? 'bg-slate-700 text-white'
-                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
-                  }`
-                },
-                  React.createElement("span", null, "\uD83C\uDFC6"),
-                  "Leaderboard"
-                )
-              ),
+            React.createElement("div", { className: "flex items-center justify-end mb-6" },
               React.createElement("button", {
                 onClick: () => setIncludeLiveGames(!includeLiveGames),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
@@ -906,164 +893,162 @@ function NFLScoresTracker() {
                 includeLiveGames ? 'Including Live Games' : 'Final Games Only'
               )
             ),
-            confidenceView === 'overview' ? (
-              React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
-                React.createElement("div", { className: "overflow-x-auto" },
-                  React.createElement("table", { className: "w-full" },
-                    React.createElement("thead", null,
-                      React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
-                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' })) },
-                            "Dev",
-                            deviationSortConfig.key === 'dev' && (deviationSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
-                        ),
-                        leaderboard.map(([player, data], idx) => {
-                          const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
-                          const pointsBehind = firstPlacePoints - data.total;
-                          return (
-                            React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700" },
-                              React.createElement("div", { className: "text-white font-semibold text-sm" }, player),
-                              React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
-                              idx === 0 ? React.createElement("div", { className: "text-xs text-green-400" }, "Leader") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
-                              React.createElement("div", { className: "text-slate-400 text-xs" }, `This Week: ${data.weekly}`),
-                              React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
-                            )
-                          );
-                        })
-                      )
-                    ),
-                    React.createElement("tbody", null,
-                                        (displayedWeek ? [...displayedWeek.games].sort((a, b) => {
-                                          const aIsLive = isLive(a);
-                                          const bIsLive = isLive(b);
-
-                                          if (deviationSortConfig.key === 'dev') {
-                                            const aDev = deviationData.find(d => d.gameId === a.id)?.avgDeviation || 0;
-                                            const bDev = deviationData.find(d => d.gameId === b.id)?.avgDeviation || 0;
-                                            if (aDev < bDev) {
-                                                return deviationSortConfig.direction === 'ascending' ? -1 : 1;
-                                            }
-                                            if (aDev > bDev) {
-                                                return deviationSortConfig.direction === 'ascending' ? 1 : -1;
-                                            }
-                                          }
-
-                                          if (aIsLive && !bIsLive) return -1; // a (live) comes before b (not live)
-                                          if (!aIsLive && bIsLive) return 1;  // b (live) comes before a (not live)
-
-                                          return new Date(a.date) - new Date(b.date); // Sort by date if both are live or both are not live
-                                        }) : []).map((game) => {
-                                          const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
-                                          const live = isLive(game);
-                                          return (
-                                            React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'bg-green-500/10' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
-                              React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
-                                `${game.away} @ ${game.home}`,
-                                isGameOfTheWeek && (
-                                  React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
-                                )
-                              )
-                            ),
-                            React.createElement("td", { className: "px-4 py-3" },
-                              React.createElement("div", { className: "text-sm" },
-                                game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
-                                  React.createElement("span", { className: "text-white font-semibold" }, 
-                                    `${game.awayScore}-${game.homeScore}`,
-                                    (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
-                                      React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
-                                  )
-                                ) : (
-                                  getGameStatus(game) === 'Scheduled' && game.date ? (
-                                    React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
-                                  ) : (
-                                    React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
-                                  )
-                                )
-                              )
-                            ),
-                            React.createElement("td", { className: "px-4 py-3" },
-                              game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
-                                React.createElement("div", { className: "text-sm" },
-                                  React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
-                                  React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
-                                )
-                              ) : (
-                                React.createElement("span", { className: "text-slate-400" }, "N/A")
-                              )
-                            ),
-                            React.createElement("td", { className: "px-4 py-3 text-white" },
-                              deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
-                            ),
-                            leaderboard.map(([player, data]) => {
-                                const detail = data.details.find(d => d.gameId === game.id);
-                                if (!detail) return React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-500 border-l border-slate-700/50" }, "-");
-
-                                const isCorrect = detail.correct;
-                                const isWrong = detail.correct === false;
-
-                                return (
-                                    React.createElement("td", { key: player, className: "px-4 py-3 text-center border-l border-slate-700/50" },
-                                        React.createElement("div", { className: `inline-flex items-center gap-1.5 px-2 py-1 rounded text-sm font-semibold ${
-                                            isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
-                                            isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
-                                            'bg-slate-700/50 text-slate-300 border border-slate-600'
-                                        }` },
-                                            React.createElement("span", null, teamAbbreviations[detail.pick] || detail.pick),
-                                            React.createElement("span", { className: `text-xs px-1.5 py-0.5 rounded ${
-                                                isCorrect ? 'bg-green-500 text-white' :
-                                                isWrong ? 'bg-red-500 text-white' :
-                                                'bg-slate-600 text-slate-200'
-                                            }` },
-                                                detail.confidence
-                                            )
-                                        )
-                                    )
-                                );
-                            })
+            React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
+              React.createElement("div", { className: "overflow-x-auto" },
+                React.createElement("table", { className: "w-full" },
+                  React.createElement("thead", null,
+                    React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+                      React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
+                      React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
+                      React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
+                      React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' })) },
+                          "Dev",
+                          deviationSortConfig.key === 'dev' && (deviationSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
+                      ),
+                      leaderboard.map(([player, data], idx) => {
+                        const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
+                        const pointsBehind = firstPlacePoints - data.total;
+                        return (
+                          React.createElement("th", { key: player, className: "px-4 py-3 text-center border-l border-slate-700" },
+                            React.createElement("div", { className: "text-white font-semibold text-sm" }, player),
+                            React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
+                            idx === 0 ? React.createElement("div", { className: "text-xs text-green-400" }, "Leader") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
+                            React.createElement("div", { className: "text-slate-400 text-xs" }, `This Week: ${data.weekly}`),
+                            React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
                           )
                         );
                       })
                     )
-                  )
-                )
-              )
-            ) : (
-              React.createElement("div", { className: "space-y-6" },
-                React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
-                  React.createElement("h2", { className: "text-xl font-bold text-white mb-4 flex items-center gap-2" },
-                    React.createElement("span", null, "\uD83C\uDFC6"),
-                    "Leaderboard"
                   ),
-                  React.createElement("div", { className: "space-y-2" },
-                    leaderboard.map(([player, data], idx) => {
-                      const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
-                      const pointsBehind = firstPlacePoints - data.total;
-                      return (
-                        React.createElement("div", { key: player, className: "flex items-center justify-between bg-slate-700/30 rounded-lg p-3" },
-                          React.createElement("div", { className: "flex items-center gap-3" },
-                            React.createElement("div", { className: `w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                              idx === 0 ? 'bg-yellow-500 text-slate-900' :
-                              idx === 1 ? 'bg-slate-400 text-slate-900' :
-                              idx === 2 ? 'bg-amber-700 text-white' :
-                              'bg-slate-600 text-slate-300'
-                            }` },
-                              idx + 1
-                            ),
-                            React.createElement("span", { className: "text-white font-semibold" }, player)
+                  React.createElement("tbody", null,
+                                      (displayedWeek ? [...displayedWeek.games].sort((a, b) => {
+                                        const aIsLive = isLive(a);
+                                        const bIsLive = isLive(b);
+
+                                        if (deviationSortConfig.key === 'dev') {
+                                          const aDev = deviationData.find(d => d.gameId === a.id)?.avgDeviation || 0;
+                                          const bDev = deviationData.find(d => d.gameId === b.id)?.avgDeviation || 0;
+                                          if (aDev < bDev) {
+                                              return deviationSortConfig.direction === 'ascending' ? -1 : 1;
+                                          }
+                                          if (aDev > bDev) {
+                                              return deviationSortConfig.direction === 'ascending' ? 1 : -1;
+                                          }
+                                        }
+
+                                        if (aIsLive && !bIsLive) return -1; // a (live) comes before b (not live)
+                                        if (!aIsLive && bIsLive) return 1;  // b (live) comes before a (not live)
+
+                                        return new Date(a.date) - new Date(b.date); // Sort by date if both are live or both are not live
+                                      }) : []).map((game) => {
+                                        const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
+                                        const live = isLive(game);
+                                        return (
+                                          React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'bg-green-500/10' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
+                            React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
+                              `${game.away} @ ${game.home}`,
+                              isGameOfTheWeek && (
+                                React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
+                              )
+                            )
                           ),
-                          React.createElement("div", { className: "text-right" },
-                            React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
-                            pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
-                            React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`),
-                            React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
-                          )
+                          React.createElement("td", { className: "px-4 py-3" },
+                            React.createElement("div", { className: "text-sm" },
+                              game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
+                                React.createElement("span", { className: "text-white font-semibold" }, 
+                                  `${game.awayScore}-${game.homeScore}`,
+                                  (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
+                                    React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
+                                )
+                              ) : (
+                                getGameStatus(game) === 'Scheduled' && game.date ? (
+                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
+                                ) : (
+                                  React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
+                                )
+                              )
+                            )
+                          ),
+                          React.createElement("td", { className: "px-4 py-3" },
+                            game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
+                              React.createElement("div", { className: "text-sm" },
+                                React.createElement("div", { className: "text-white" }, `${game.home}: ${game.homeWinProbability.toFixed(1)}%`),
+                                React.createElement("div", { className: "text-white" }, `${game.away}: ${game.awayWinProbability.toFixed(1)}%`)
+                              )
+                            ) : (
+                              React.createElement("span", { className: "text-slate-400" }, "N/A")
+                            )
+                          ),
+                          React.createElement("td", { className: "px-4 py-3 text-white" },
+                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
+                          ),
+                          leaderboard.map(([player, data]) => {
+                              const detail = data.details.find(d => d.gameId === game.id);
+                              if (!detail) return React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-500 border-l border-slate-700/50" }, "-");
+
+                              const isCorrect = detail.correct;
+                              const isWrong = detail.correct === false;
+
+                              return (
+                                  React.createElement("td", { key: player, className: "px-4 py-3 text-center border-l border-slate-700/50" },
+                                      React.createElement("div", { className: `inline-flex items-center gap-1.5 px-2 py-1 rounded text-sm font-semibold ${
+                                          isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
+                                          isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
+                                          'bg-slate-700/50 text-slate-300 border border-slate-600'
+                                      }` },
+                                          React.createElement("span", null, teamAbbreviations[detail.pick] || detail.pick),
+                                          React.createElement("span", { className: `text-xs px-1.5 py-0.5 rounded ${
+                                              isCorrect ? 'bg-green-500 text-white' :
+                                              isWrong ? 'bg-red-500 text-white' :
+                                              'bg-slate-600 text-slate-200'
+                                          }` },
+                                              detail.confidence
+                                          )
+                                      )
+                                  )
+                              );
+                          })
                         )
                       );
                     })
                   )
                 )
+              )
+            )
+          )
+        ) : activeTab === 'leaderboard' ? (
+          React.createElement("div", { className: "space-y-6" },
+            React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
+              React.createElement("h2", { className: "text-xl font-bold text-white mb-4 flex items-center gap-2" },
+                React.createElement("span", null, "\uD83C\uDFC6"),
+                "Leaderboard"
+              ),
+              React.createElement("div", { className: "space-y-2" },
+                leaderboard.map(([player, data], idx) => {
+                  const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
+                  const pointsBehind = firstPlacePoints - data.total;
+                  return (
+                    React.createElement("div", { key: player, className: "flex items-center justify-between bg-slate-700/30 rounded-lg p-3" },
+                      React.createElement("div", { className: "flex items-center gap-3" },
+                        React.createElement("div", { className: `w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          idx === 0 ? 'bg-yellow-500 text-slate-900' :
+                          idx === 1 ? 'bg-slate-400 text-slate-900' :
+                          idx === 2 ? 'bg-amber-700 text-white' :
+                          'bg-slate-600 text-slate-300'
+                        }` },
+                          idx + 1
+                        ),
+                        React.createElement("span", { className: "text-white font-semibold" }, player)
+                      ),
+                      React.createElement("div", { className: "text-right" },
+                        React.createElement("div", { className: "text-2xl font-bold text-white" }, data.total),
+                        pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind} behind`),
+                        React.createElement("div", { className: "text-xs text-slate-400" }, `This Week: ${data.weekly}`),
+                        React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
+                      )
+                    )
+                  );
+                })
               )
             )
           )
