@@ -374,41 +374,6 @@ function OddsTable({ weeks, selectedWeek }) {
   );
 }
 
-function DeviationTable({ deviationData, weeks, selectedWeek }) {
-  if (!selectedWeek) return null;
-
-  const weekData = weeks.find(w => w.week === selectedWeek);
-
-  if (!weekData) {
-    return React.createElement("div", { className: "text-white text-center py-10" }, "Data for this week is not available yet.");
-  }
-
-  return (
-    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
-      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Average Deviation for Week ${selectedWeek}`),
-      React.createElement("table", { className: "w-full" },
-        React.createElement("thead", null,
-          React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Average Deviation")
-          )
-        ),
-        React.createElement("tbody", null,
-          weekData.games.map(game => {
-            const deviation = deviationData.find(d => d.gameId === game.id);
-            return (
-              React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
-                React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, deviation ? deviation.avgDeviation.toFixed(2) : "N/A")
-              )
-            )
-          })
-        )
-      )
-    )
-  );
-}
-
 function NFLScoresTracker() {
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(undefined);
@@ -422,6 +387,7 @@ function NFLScoresTracker() {
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
   const [deviationData, setDeviationData] = useState([]);
+  const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -594,8 +560,8 @@ function NFLScoresTracker() {
     fetchScores(); // Initial fetch
 
     const intervalId = setInterval(() => {
-      fetchScores(); // Fetch every minute
-    }, 60 * 1000); // 1 minute
+      fetchScores(); // Fetch every 5 minutes
+    }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [useMockData]); // Re-run if useMockData changes
@@ -875,16 +841,6 @@ function NFLScoresTracker() {
               }`
             },
               "Odds"
-            ),
-            React.createElement("button", {
-              onClick: () => setActiveTab('deviation'),
-              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'deviation'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-              }`
-            },
-              "Deviation"
             )
           )
         )
@@ -911,8 +867,6 @@ function NFLScoresTracker() {
           )
         ) : activeTab === 'odds' ? (
           React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
-        ) : activeTab === 'deviation' ? (
-          React.createElement(DeviationTable, { deviationData: deviationData, weeks: weeks, selectedWeek: selectedWeek })
         ) : activeTab === 'confidence' ? (
           React.createElement("div", null,
             React.createElement("div", { className: "flex items-center justify-between mb-6" },
@@ -961,6 +915,10 @@ function NFLScoresTracker() {
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Result"),
                         React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Prob."),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' })) },
+                            "Dev",
+                            deviationSortConfig.key === 'dev' && (deviationSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
+                        ),
                         leaderboard.map(([player, data], idx) => {
                           const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                           const pointsBehind = firstPlacePoints - data.total;
@@ -976,10 +934,21 @@ function NFLScoresTracker() {
                         })
                       )
                     ),
-                                      React.createElement("tbody", null,
+                    React.createElement("tbody", null,
                                         (displayedWeek ? [...displayedWeek.games].sort((a, b) => {
                                           const aIsLive = isLive(a);
                                           const bIsLive = isLive(b);
+
+                                          if (deviationSortConfig.key === 'dev') {
+                                            const aDev = deviationData.find(d => d.gameId === a.id)?.avgDeviation || 0;
+                                            const bDev = deviationData.find(d => d.gameId === b.id)?.avgDeviation || 0;
+                                            if (aDev < bDev) {
+                                                return deviationSortConfig.direction === 'ascending' ? -1 : 1;
+                                            }
+                                            if (aDev > bDev) {
+                                                return deviationSortConfig.direction === 'ascending' ? 1 : -1;
+                                            }
+                                          }
 
                                           if (aIsLive && !bIsLive) return -1; // a (live) comes before b (not live)
                                           if (!aIsLive && bIsLive) return 1;  // b (live) comes before a (not live)
@@ -988,7 +957,6 @@ function NFLScoresTracker() {
                                         }) : []).map((game) => {
                                           const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
                                           const live = isLive(game);
-                                          console.log('Game object in overview table:', game);
                                           return (
                                             React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'bg-green-500/10' : ''}` },                            React.createElement("td", { className: "px-4 py-3" },
                               React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
@@ -1024,6 +992,9 @@ function NFLScoresTracker() {
                               ) : (
                                 React.createElement("span", { className: "text-slate-400" }, "N/A")
                               )
+                            ),
+                            React.createElement("td", { className: "px-4 py-3 text-white" },
+                              deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
                             ),
                             leaderboard.map(([player, data]) => {
                                 const detail = data.details.find(d => d.gameId === game.id);
