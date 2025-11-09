@@ -873,7 +873,7 @@ function NFLScoresTracker() {
                         const pointsBehind = firstPlacePoints - data.total;
                         return (
                           React.createElement("th", { key: player, className: "px-2 py-1 text-center border-l border-slate-700 cursor-pointer", onClick: () => requestPlayerSort(player) },
-                            React.createElement("div", { className: "text-white font-semibold text-sm" }, player, playerSortConfig.key === player && (playerSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')),
+                            React.createElement("div", { className: "text-white font-semibold text-xs" }, player, playerSortConfig.key === player && (playerSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')),
                             React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
                             idx === 0 ? React.createElement("div", { className: "text-xs text-green-400" }, "Leader") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind}`),
                             React.createElement("div", { className: "text-slate-400 text-xs" }, `Week: ${data.weekly}`),
@@ -967,7 +967,7 @@ function NFLScoresTracker() {
 
                               return (
                                   React.createElement("td", { key: player, className: "px-2 py-1 text-center border-l border-slate-700/50" },
-                                      React.createElement("div", { className: `px-2 py-1 rounded text-sm font-semibold text-center ${
+                                      React.createElement("div", { className: `px-1 py-0 rounded text-sm font-semibold text-center ${
                                           isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
