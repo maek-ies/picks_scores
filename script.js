@@ -768,16 +768,6 @@ function NFLScoresTracker() {
                 React.createElement("span", { className: `w-2 h-2 rounded-full ${includeLiveGames ? 'bg-white animate-pulse' : 'bg-slate-500'}` }),
                 includeLiveGames ? 'Incl. Live Games' : 'Final Games Only'
               ),
-              React.createElement("button", {
-                onClick: () => setShowLogos(!showLogos),
-                className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
-                  showLogos
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
-                }`
-              },
-                "Logos"
-              ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
               )
@@ -794,16 +784,7 @@ function NFLScoresTracker() {
             },
               "Week Overview"
             ),
-            React.createElement("button", {
-              onClick: () => setActiveTab('scores'),
-              className: `px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'scores'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-              }`
-            },
-              "Scores"
-            ),
+
             React.createElement("button", {
               onClick: () => setActiveTab('chart'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -1044,55 +1025,7 @@ function NFLScoresTracker() {
               )
             )
           )
-        ) : (
-          React.createElement("div", { className: "space-y-6" },
-            (displayedWeek ? [...displayedWeek.games].sort((a, b) => new Date(a.date) - new Date(b.date)) : []).map((game) => {
-              const live = isLive(game);
-              const status = getGameStatus(game);
-              const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
-
-              return (
-                React.createElement("div",
-                  { key: game.id,
-                  className: `bg-slate-800/50 rounded-lg border ${
-                    live ? 'border-green-500' : 'border-slate-700'
-                  } overflow-hidden`
-                },
-                  React.createElement("div", { className: `px-2 py-1 text-xs font-semibold text-center flex items-center justify-center gap-2 ${
-                    live ? 'bg-green-500 text-white' : 'bg-slate-700/50 text-slate-300'
-                  }` },
-                    live && React.createElement("span", { className: "inline-block w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse" }),
-                    status,
-                    (status === 'FINAL' || status === 'LIVE') && game.date && React.createElement("span", null, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })),
-                    live && game.displayClock && game.period && React.createElement("span", null, `Q${game.period} - ${game.displayClock.split(' - ')[0]}`),
-                    !live && status === 'Scheduled' && game.date && React.createElement("span", null, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })),
-                    isGameOfTheWeek && (
-                      React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
-                    )
-                  ),
-                  React.createElement("div", { className: "p-3" },
-                    React.createElement("div", { className: "flex items-center justify-between mb-2" },
-                      React.createElement("div", { className: "flex items-center gap-3 flex-1" },
-                        React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.away.toLowerCase()}.png`, alt: game.away, className: "w-8 h-8" }),
-                        React.createElement("span", { className: "text-white font-semibold" }, game.away),
-                        game.awayWinProbability && (isLive(game) || (game.status === 'final' || game.status === 'post')) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.awayWinProbability.toFixed(1)}%)`)
-                      ),
-                      React.createElement("span", { className: "text-2xl font-bold text-white" }, game.awayScore)
-                    ),
-                    React.createElement("div", { className: "flex items-center justify-between" },
-                      React.createElement("div", { className: "flex items-center gap-3 flex-1" },
-                        React.createElement("img", { src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.home.toLowerCase()}.png`, alt: game.home, className: "w-8 h-8" }),
-                        React.createElement("span", { className: "text-white font-semibold" }, game.home),
-                        game.homeWinProbability && (isLive(game) || (game.status === 'final' || game.status === 'post')) && React.createElement("span", { className: "text-slate-400 text-xs" }, `(${game.homeWinProbability.toFixed(1)}%)`)
-                      ),
-                      React.createElement("span", { className: "text-2xl font-bold text-white" }, game.homeScore)
-                    )
-                  )
-                )
-              );
-            })
-          )
-        )
+        ) : null
       )
     )
   );
