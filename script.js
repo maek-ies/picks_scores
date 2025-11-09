@@ -963,6 +963,7 @@ function NFLScoresTracker() {
 
                               const isCorrect = detail.correct;
                               const isWrong = detail.correct === false;
+                              const pickAbbr = detail.pick ? (teamAbbreviations[detail.pick] || detail.pick) : null;
 
                               return (
                                   React.createElement("td", { key: player, className: "px-2 py-1 text-center border-l border-slate-700/50" },
@@ -971,13 +972,13 @@ function NFLScoresTracker() {
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
                                       }` },
-                                          showLogos ?
+                                          showLogos && pickAbbr ?
                                             React.createElement("img", {
-                                              src: `https://a.espncdn.com/i/teamlogos/nfl/500/${(teamAbbreviations[detail.pick] || detail.pick).toLowerCase()}.png`,
+                                              src: `https://a.espncdn.com/i/teamlogos/nfl/500/${pickAbbr.toLowerCase()}.png`,
                                               alt: detail.pick,
                                               className: "w-6 h-6 mx-auto"
                                             }) :
-                                            React.createElement("div", { }, teamAbbreviations[detail.pick] || detail.pick),
+                                            React.createElement("div", { }, pickAbbr || '-'),
                                           React.createElement("div", { className: `text-xs ${
                                               isCorrect ? 'text-green-400' :
                                               isWrong ? 'text-red-400' :
