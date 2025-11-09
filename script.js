@@ -908,6 +908,7 @@ function NFLScoresTracker() {
                   React.createElement("thead", null,
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                       React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "Game"),
+                      React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "Result"),
                       leaderboard.map(([player, data], idx) => {
                         const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                         const pointsBehind = firstPlacePoints - data.total;
@@ -979,6 +980,23 @@ function NFLScoresTracker() {
                                     `${game.home}: ${game.homeWinProbability.toFixed(1)}% / ${game.away}: ${game.awayWinProbability.toFixed(1)}%`
                                 )
                             ) : null
+                          ),
+                          React.createElement("td", { className: "px-2 py-3" },
+                            React.createElement("div", { className: "text-sm" },
+                              game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
+                                React.createElement("span", { className: "text-white font-semibold" }, 
+                                  `${game.awayScore}-${game.homeScore}`,
+                                  (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
+                                    React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
+                                )
+                              ) : (
+                                getGameStatus(game) === 'Scheduled' && game.date ? (
+                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
+                                ) : (
+                                  React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
+                                )
+                              )
+                            )
                           ),
                           leaderboard.map(([player, data]) => {
                               const detail = data.details.find(d => d.gameId === game.id);
