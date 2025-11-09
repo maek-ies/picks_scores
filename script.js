@@ -1005,18 +1005,22 @@ function NFLScoresTracker() {
                                               )
                                             ),
                                             game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
-                                                React.createElement("div", { className: "text-xs text-slate-400" },
-                                                    `${game.awayWinProbability.toFixed(1)}%-${game.homeWinProbability.toFixed(1)}%`
+                                                React.createElement(React.Fragment, null,
+                                                    React.createElement("div", { className: "text-xs text-slate-400" },
+                                                        `${game.awayWinProbability.toFixed(1)}%-${game.homeWinProbability.toFixed(1)}%`
+                                                    ),
+                                                    (isLive(game) && game.displayClock && game.period) ? (
+                                                        React.createElement("div", { className: "text-xs text-red-400 animate-pulse" }, 
+                                                            `(${`Q${game.period} - ${game.displayClock.split(' - ')[0]}`})`
+                                                        )
+                                                    ) : null
                                                 )
-                                            ) : null
-                                          ),
+                                            ) : null                                          ),
                                           React.createElement("td", { className: "px-0 py-1" },
                                             React.createElement("div", { className: "text-sm" },
                                               game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
                                                 React.createElement("span", { className: "text-white font-semibold" }, 
-                                                  `${game.awayScore}-${game.homeScore}`,
-                                                  (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
-                                                    React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
+                                                  `${game.awayScore}-${game.homeScore}`
                                                 )
                                               ) : (
                                                 getGameStatus(game) === 'Scheduled' && game.date ? (
@@ -1067,7 +1071,7 @@ function NFLScoresTracker() {
 
                                         trChildren.push(
                                           React.createElement("td", { className: "px-2 py-1 text-white" },
-                                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
+                                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(1) : "N/A"
                                           )
                                         );
 
