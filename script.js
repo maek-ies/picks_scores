@@ -957,16 +957,16 @@ function NFLScoresTracker() {
 
                               return (
                                   React.createElement("td", { key: player, className: "px-2 py-3 text-center border-l border-slate-700/50" },
-                                      React.createElement("div", { className: `flex flex-col px-2 py-1 rounded text-sm font-semibold ${
+                                      React.createElement("div", { className: `flex flex-col items-center justify-center px-2 py-1 rounded text-sm font-semibold ${
                                           isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
                                       }` },
                                           React.createElement("span", { className: "text-center" }, teamAbbreviations[detail.pick] || detail.pick),
-                                          React.createElement("span", { className: `text-xs px-1.5 py-0.5 rounded ${
-                                              isCorrect ? 'bg-green-500 text-white' :
-                                              isWrong ? 'bg-red-500 text-white' :
-                                              'bg-slate-600 text-slate-200'
+                                          React.createElement("span", { className: `text-xs ${
+                                              isCorrect ? 'text-green-400' :
+                                              isWrong ? 'text-red-400' :
+                                              'text-slate-300'
                                           }` },
                                               detail.confidence
                                           )
