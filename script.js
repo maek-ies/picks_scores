@@ -970,7 +970,7 @@ function NFLScoresTracker() {
                                           isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
-                                      }` },,
+                                      }` },
                                           showLogos && pickAbbr ?
                                             React.createElement("img", {
                                               src: `https://a.espncdn.com/i/teamlogos/nfl/500/${pickAbbr.toLowerCase()}.png`,
