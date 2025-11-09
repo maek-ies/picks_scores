@@ -867,17 +867,17 @@ function NFLScoresTracker() {
                   React.createElement("thead", null,
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                       React.createElement("th", { className: "px-2 py-1 text-left text-white font-semibold text-sm" }, "Game"),
-                      React.createElement("th", { className: "px-2 py-1 text-left text-white font-semibold text-sm" }, "Result"),
+                      React.createElement("th", { className: "px-2 py-1 text-left text-white font-semibold text-sm" }, "Score"),
                       leaderboard.map(([player, data], idx) => {
                         const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                         const pointsBehind = firstPlacePoints - data.total;
                         return (
                           React.createElement("th", { key: player, className: "px-2 py-1 text-center border-l border-slate-700 cursor-pointer", onClick: () => requestPlayerSort(player) },
                             React.createElement("div", { className: "text-white font-semibold text-xs" }, player, playerSortConfig.key === player && (playerSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')),
-                            React.createElement("div", { className: "text-yellow-400 text-lg font-bold mt-1" }, data.total),
+                            React.createElement("div", { className: "text-yellow-400 text-xs font-bold mt-1" }, data.total),
                             idx === 0 ? React.createElement("div", { className: "text-xs text-green-400" }, "Leader") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400" }, `-${pointsBehind}`),
-                            React.createElement("div", { className: "text-slate-400 text-xs" }, `Week: ${data.weekly}`),
-                            React.createElement("div", { className: "text-xs text-blue-400" }, `Rem.: ${data.remainingPossible}`)
+                            React.createElement("div", { className: "text-slate-400 text-xs" }, `${data.weekly}`),
+                            React.createElement("div", { className: "text-xs text-blue-400" }, `${data.remainingPossible}`)
                           )
                         );
                       }),
