@@ -356,13 +356,13 @@ function OddsTable({ weeks, selectedWeek }) {
           weekData.games.map(game => {
             const homeML = game.homeMoneyLine;
             const awayML = game.awayMoneyLine;
-            const oddsDisplay = homeML && awayML ? `Home: ${homeML} / Away: ${awayML}` : "N/A";
+            const oddsDisplay = homeML && awayML ? `Away: ${awayML} / Home: ${homeML}` : "N/A";
             return (
               React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
                 React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, 
                   game.homeWinProbability && game.awayWinProbability ? 
-                  `Home: ${game.homeWinProbability.toFixed(1)}% / Away: ${game.awayWinProbability.toFixed(1)}%` : "N/A"
+                  `Away: ${game.awayWinProbability.toFixed(1)}% / Home: ${game.homeWinProbability.toFixed(1)}%` : "N/A"
                 ),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, oddsDisplay)
               )
@@ -785,12 +785,6 @@ function NFLScoresTracker() {
               React.createElement("span", null, "\uD83D\uDCFA"),
               React.createElement("div", null,
                 React.createElement("h1", { className: "text-2xl font-bold text-white" }, "NFL Tracker"),
-                selectedWeek && (
-                  React.createElement("div", { className: "flex items-center gap-2 text-slate-400 text-sm mt-1" },
-                    React.createElement("span", null, "\uD83D\uDCC5"),
-                    `Week ${selectedWeek}`
-                  )
-                )
               )
             ),
             React.createElement("div", { className: "flex gap-2" },
@@ -803,6 +797,17 @@ function NFLScoresTracker() {
               ),
               React.createElement("button", { onClick: fetchScores, className: "px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
                 "Refresh Scores"
+              ),
+              React.createElement("button", {
+                onClick: () => setIncludeLiveGames(!includeLiveGames),
+                className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
+                  includeLiveGames
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
+                }`
+              },
+                React.createElement("span", { className: `w-2 h-2 rounded-full ${includeLiveGames ? 'bg-white animate-pulse' : 'bg-slate-500'}` }),
+                includeLiveGames ? 'Including Live Games' : 'Final Games Only'
               ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
@@ -889,19 +894,6 @@ function NFLScoresTracker() {
           React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
         ) : activeTab === 'week-overview' ? (
           React.createElement("div", null,
-            React.createElement("div", { className: "flex items-center justify-end mb-6" },
-              React.createElement("button", {
-                onClick: () => setIncludeLiveGames(!includeLiveGames),
-                className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
-                  includeLiveGames
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
-                }`
-              },
-                React.createElement("span", { className: `w-2 h-2 rounded-full ${includeLiveGames ? 'bg-white animate-pulse' : 'bg-slate-500'}` }),
-                includeLiveGames ? 'Including Live Games' : 'Final Games Only'
-              )
-            ),
             React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
               React.createElement("div", { className: "overflow-x-auto" },
                 React.createElement("table", { className: "w-full" },
@@ -977,7 +969,7 @@ function NFLScoresTracker() {
                             ),
                             game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
                                 React.createElement("div", { className: "text-xs text-slate-400" },
-                                    `${game.home}: ${game.homeWinProbability.toFixed(1)}% / ${game.away}: ${game.awayWinProbability.toFixed(1)}%`
+                                    `${game.away}: ${game.awayWinProbability.toFixed(1)}% / ${game.home}: ${game.homeWinProbability.toFixed(1)}%`
                                 )
                             ) : null
                           ),
