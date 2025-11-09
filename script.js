@@ -387,6 +387,7 @@ function NFLScoresTracker() {
   const [deviationData, setDeviationData] = useState([]);
   const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
   const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [showLogos, setShowLogos] = useState(false);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -767,6 +768,16 @@ function NFLScoresTracker() {
                 React.createElement("span", { className: `w-2 h-2 rounded-full ${includeLiveGames ? 'bg-white animate-pulse' : 'bg-slate-500'}` }),
                 includeLiveGames ? 'Incl. Live Games' : 'Final Games Only'
               ),
+              React.createElement("button", {
+                onClick: () => setShowLogos(!showLogos),
+                className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
+                  showLogos
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
+                }`
+              },
+                "Logos"
+              ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
               )
@@ -960,7 +971,13 @@ function NFLScoresTracker() {
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
                                       }` },
-                                          React.createElement("div", { }, teamAbbreviations[detail.pick] || detail.pick),
+                                          showLogos ?
+                                            React.createElement("img", {
+                                              src: `https://a.espncdn.com/i/teamlogos/nfl/500/${(teamAbbreviations[detail.pick] || detail.pick).toLowerCase()}.png`,
+                                              alt: detail.pick,
+                                              className: "w-6 h-6 mx-auto"
+                                            }) :
+                                            React.createElement("div", { }, teamAbbreviations[detail.pick] || detail.pick),
                                           React.createElement("div", { className: `text-xs ${
                                               isCorrect ? 'text-green-400' :
                                               isWrong ? 'text-red-400' :
