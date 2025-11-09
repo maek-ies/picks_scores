@@ -382,7 +382,6 @@ function NFLScoresTracker() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeTab, setActiveTab] = useState('week-overview');
   const [includeLiveGames, setIncludeLiveGames] = useState(true);
-  const [useMockData, setUseMockData] = useState(false);
   const [mockPicks, setMockPicks] = useState({});
   const [gamesOfTheWeek, setGamesOfTheWeek] = useState([]);
   const [deviationData, setDeviationData] = useState([]);
@@ -418,135 +417,101 @@ function NFLScoresTracker() {
       const gamesOfTheWeekIds = gamesOfTheWeekResponse.split(",").map(id => parseInt(id.trim())).filter(id => !isNaN(id));
       setGamesOfTheWeek(gamesOfTheWeekIds);
 
-      if (useMockData) {
-        const [weeksResponse, picksResponse] = await Promise.all([
-          fetch('data/weeks.json').then(res => res.json()),
-          fetch('picks.json').then(res => res.json())
-        ]);
-
-        setWeeks(weeksResponse);
-        if (weeksResponse.length > 0 && !selectedWeek) {
-          const seasonOrigin = new Date('2025-09-04');
-          const today = new Date();
-          seasonOrigin.setHours(0,0,0,0);
-          today.setHours(0,0,0,0);
-          const dayDiff = (today - seasonOrigin) / (1000 * 60 * 60 * 24);
-          const currentWeek = Math.ceil((dayDiff + 1) / 7);
-          const maxWeek = weeksResponse[weeksResponse.length - 1].week;
-          const defaultWeek = Math.max(1, Math.min(currentWeek, maxWeek));
-          setSelectedWeek(defaultWeek);
-        }
-
-        const transformedPicks = {};
-        picksResponse.forEach(pick => {
-          if (!transformedPicks[pick.name]) {
-            transformedPicks[pick.name] = [];
-          }
-          transformedPicks[pick.name].push({
-            gameId: pick.game_id,
-            pick: pick.picked,
-            confidence: parseInt(pick.confidence) || 0
-          });
-        });
-        setMockPicks(transformedPicks);
-
-      } else {
-        const weekPromises = Array.from({ length: 18 }, (_, i) => i + 1).map(weekNum =>
-          fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNum}`)
-            .then(res => res.json())
-            .then(data => ({ week: weekNum, games: transformEspnData(data) }))
-        );
-        const allWeeks = await Promise.all(weekPromises);
-        setWeeks(allWeeks);
-        if (allWeeks.length > 0 && !selectedWeek) {
-          const seasonOrigin = new Date('2025-09-04');
-          const today = new Date();
-          seasonOrigin.setHours(0,0,0,0);
-          today.setHours(0,0,0,0);
-          const dayDiff = (today - seasonOrigin) / (1000 * 60 * 60 * 24);
-          const currentWeek = Math.ceil((dayDiff + 1) / 7);
-          const maxWeek = allWeeks[allWeeks.length - 1].week;
-          const defaultWeek = Math.max(1, Math.min(currentWeek, maxWeek));
-          setSelectedWeek(defaultWeek);
-        }
-
-        // Fetch win probabilities for all games across all weeks
-        const allGamesWithSummaryPromises = allWeeks.flatMap(weekData =>
-          weekData.games.map(async (game) => {
-            try {
-              const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
-              const summaryData = await summaryResponse.json();
-
-              let homeWinProbability = null;
-              let awayWinProbability = null;
-              let homeMoneyLine = null;
-              let awayMoneyLine = null;
-
-              if (summaryData.pickcenter && summaryData.pickcenter.length > 0 && summaryData.pickcenter[0].moneyline) {
-                  if(summaryData.pickcenter[0].moneyline.home && summaryData.pickcenter[0].moneyline.home.close) {
-                      homeMoneyLine = summaryData.pickcenter[0].moneyline.home.close.odds;
-                  }
-                  if(summaryData.pickcenter[0].moneyline.away && summaryData.pickcenter[0].moneyline.away.close) {
-                      awayMoneyLine = summaryData.pickcenter[0].moneyline.away.close.odds;
-                  }
-              }
-
-              const gameStatus = game.status;
-
-              if (gameStatus === 'scheduled' || gameStatus === 'pre') {
-                  // For games that have not started, use the predictor
-                  if (summaryData.predictor && summaryData.predictor.homeTeam && summaryData.predictor.awayTeam) {
-                      homeWinProbability = summaryData.predictor.homeTeam.gameProjection * 1;
-                      awayWinProbability = summaryData.predictor.awayTeam.gameProjection * 1;
-                  }
-              } else { // Game is 'in', 'live', 'post', or other state
-                  // For other states, use the winprobability array as it was before
-                  if (summaryData.winprobability && summaryData.winprobability.length > 0) {
-                      const winProbabilities = summaryData.winprobability;
-              
-                      if (game.status === 'post') {
-                          homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
-                          awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
-                      } else if (game.status === 'in' || game.status === 'live') {
-                          const latestWinProbability = winProbabilities[winProbabilities.length - 1];
-                          homeWinProbability = latestWinProbability.homeWinPercentage * 100;
-                          awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
-                      }
-                  }
-              }
-
-              return { ...game, homeWinProbability, awayWinProbability, homeMoneyLine, awayMoneyLine };
-            } catch (summaryError) {
-              return game; // Return original game if summary fetch fails
-            }
-          })
-        );
-        const allGamesWithSummaries = await Promise.all(allGamesWithSummaryPromises);
-
-        const updatedWeeks = allWeeks.map(weekData => ({
-          ...weekData,
-          games: weekData.games.map(game => {
-            const summaryGame = allGamesWithSummaries.find(sg => sg.id === game.id);
-            return summaryGame || game;
-          })
-        }));
-        setWeeks(updatedWeeks);
-
-        // When using live data, we still need mock picks
-        const picksResponse = await fetch('picks.json').then(res => res.json());
-        const transformedPicks = {};
-        picksResponse.forEach(pick => {
-          if (!transformedPicks[pick.name]) {
-            transformedPicks[pick.name] = [];
-          }
-          transformedPicks[pick.name].push({
-            gameId: pick.game_id,
-            pick: pick.picked,
-            confidence: pick.confidence
-          });
-        });
-        setMockPicks(transformedPicks);
+      const weekPromises = Array.from({ length: 18 }, (_, i) => i + 1).map(weekNum =>
+        fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNum}`)
+          .then(res => res.json())
+          .then(data => ({ week: weekNum, games: transformEspnData(data) }))
+      );
+      const allWeeks = await Promise.all(weekPromises);
+      setWeeks(allWeeks);
+      if (allWeeks.length > 0 && !selectedWeek) {
+        const seasonOrigin = new Date('2025-09-04');
+        const today = new Date();
+        seasonOrigin.setHours(0,0,0,0);
+        today.setHours(0,0,0,0);
+        const dayDiff = (today - seasonOrigin) / (1000 * 60 * 60 * 24);
+        const currentWeek = Math.ceil((dayDiff + 1) / 7);
+        const maxWeek = allWeeks[allWeeks.length - 1].week;
+        const defaultWeek = Math.max(1, Math.min(currentWeek, maxWeek));
+        setSelectedWeek(defaultWeek);
       }
+
+      // Fetch win probabilities for all games across all weeks
+      const allGamesWithSummaryPromises = allWeeks.flatMap(weekData =>
+        weekData.games.map(async (game) => {
+          try {
+            const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
+            const summaryData = await summaryResponse.json();
+
+            let homeWinProbability = null;
+            let awayWinProbability = null;
+            let homeMoneyLine = null;
+            let awayMoneyLine = null;
+
+            if (summaryData.pickcenter && summaryData.pickcenter.length > 0 && summaryData.pickcenter[0].moneyline) {
+                if(summaryData.pickcenter[0].moneyline.home && summaryData.pickcenter[0].moneyline.home.close) {
+                    homeMoneyLine = summaryData.pickcenter[0].moneyline.home.close.odds;
+                }
+                if(summaryData.pickcenter[0].moneyline.away && summaryData.pickcenter[0].moneyline.away.close) {
+                    awayMoneyLine = summaryData.pickcenter[0].moneyline.away.close.odds;
+                }
+            }
+
+            const gameStatus = game.status;
+
+            if (gameStatus === 'scheduled' || gameStatus === 'pre') {
+                // For games that have not started, use the predictor
+                if (summaryData.predictor && summaryData.predictor.homeTeam && summaryData.predictor.awayTeam) {
+                    homeWinProbability = summaryData.predictor.homeTeam.gameProjection * 1;
+                    awayWinProbability = summaryData.predictor.awayTeam.gameProjection * 1;
+                }
+            } else { // Game is 'in', 'live', 'post', or other state
+                // For other states, use the winprobability array as it was before
+                if (summaryData.winprobability && summaryData.winprobability.length > 0) {
+                    const winProbabilities = summaryData.winprobability;
+            
+                    if (game.status === 'post') {
+                        homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
+                        awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
+                    } else if (game.status === 'in' || game.status === 'live') {
+                        const latestWinProbability = winProbabilities[winProbabilities.length - 1];
+                        homeWinProbability = latestWinProbability.homeWinPercentage * 100;
+                        awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
+                    }
+                }
+            }
+
+            return { ...game, homeWinProbability, awayWinProbability, homeMoneyLine, awayMoneyLine };
+          } catch (summaryError) {
+            return game; // Return original game if summary fetch fails
+          }
+        })
+      );
+      const allGamesWithSummaries = await Promise.all(allGamesWithSummaryPromises);
+
+      const updatedWeeks = allWeeks.map(weekData => ({
+        ...weekData,
+        games: weekData.games.map(game => {
+          const summaryGame = allGamesWithSummaries.find(sg => sg.id === game.id);
+          return summaryGame || game;
+        })
+      }));
+      setWeeks(updatedWeeks);
+
+      // When using live data, we still need mock picks
+      const picksResponse = await fetch('picks.json').then(res => res.json());
+      const transformedPicks = {};
+      picksResponse.forEach(pick => {
+        if (!transformedPicks[pick.name]) {
+          transformedPicks[pick.name] = [];
+        }
+        transformedPicks[pick.name].push({
+          gameId: pick.game_id,
+          pick: pick.picked,
+          confidence: pick.confidence
+        });
+      });
+      setMockPicks(transformedPicks);
     } catch (err) {
       console.error("Fetch error:", err);
       setError("Unable to fetch data. Please try again or use mock data.");
@@ -564,7 +529,7 @@ function NFLScoresTracker() {
     }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(intervalId); // Cleanup on unmount
-  }, [useMockData]); // Re-run if useMockData changes
+  }, []); // Re-run if useMockData changes
 
   useEffect(() => {
     if (weeks.length > 0 && Object.keys(mockPicks).length > 0) {
@@ -784,17 +749,10 @@ function NFLScoresTracker() {
             React.createElement("div", { className: "flex items-center gap-3" },
               React.createElement("span", null, "\uD83D\uDCFA"),
               React.createElement("div", null,
-                React.createElement("h1", { className: "text-2xl font-bold text-white" }, "NFL Tracker"),
+                React.createElement("h1", { className: "text-2xl font-bold text-white" }, "NFL Pickem Live Tracker"),
               )
             ),
             React.createElement("div", { className: "flex gap-2" },
-              React.createElement("button", { onClick: () => setUseMockData(!useMockData), className: `px-3 py-2 text-sm rounded-lg transition-colors ${
-                  useMockData 
-                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
-                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                }` },
-                useMockData ? "Using Mock Data" : "Using Live Data"
-              ),
               React.createElement("button", { onClick: fetchScores, className: "px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
                 "Refresh Scores"
               ),
@@ -802,12 +760,12 @@ function NFLScoresTracker() {
                 onClick: () => setIncludeLiveGames(!includeLiveGames),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
                   includeLiveGames
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
                 }`
               },
                 React.createElement("span", { className: `w-2 h-2 rounded-full ${includeLiveGames ? 'bg-white animate-pulse' : 'bg-slate-500'}` }),
-                includeLiveGames ? 'Including Live Games' : 'Final Games Only'
+                includeLiveGames ? 'Incl. live games' : 'Final Games Only'
               ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
