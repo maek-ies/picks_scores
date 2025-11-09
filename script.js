@@ -781,7 +781,6 @@ function NFLScoresTracker() {
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              React.createElement("span", null, "\uD83D\uDDB7"),
               "Week Overview"
             ),
             React.createElement("button", {
@@ -957,13 +956,13 @@ function NFLScoresTracker() {
 
                               return (
                                   React.createElement("td", { key: player, className: "px-2 py-3 text-center border-l border-slate-700/50" },
-                                      React.createElement("div", { className: `flex flex-col items-center justify-center px-2 py-1 rounded text-sm font-semibold ${
+                                      React.createElement("div", { className: `px-2 py-1 rounded text-sm font-semibold text-center ${
                                           isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
                                       }` },
-                                          React.createElement("span", { className: "text-center" }, teamAbbreviations[detail.pick] || detail.pick),
-                                          React.createElement("span", { className: `text-xs ${
+                                          React.createElement("div", { }, teamAbbreviations[detail.pick] || detail.pick),
+                                          React.createElement("div", { className: `text-xs ${
                                               isCorrect ? 'text-green-400' :
                                               isWrong ? 'text-red-400' :
                                               'text-slate-300'
