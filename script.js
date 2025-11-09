@@ -801,7 +801,7 @@ function NFLScoresTracker() {
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              "Chart"
+              "Charts"
             ),
             React.createElement("button", {
               onClick: () => setActiveTab('odds'),
@@ -821,7 +821,6 @@ function NFLScoresTracker() {
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              React.createElement("span", null, "\uD83C\uDFC6"),
               "Leaderboard"
             )
           )
@@ -940,7 +939,7 @@ function NFLScoresTracker() {
                                 )
                               ) : (
                                 getGameStatus(game) === 'Scheduled' && game.date ? (
-                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
+                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }))
                                 ) : (
                                   React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
                                 )
