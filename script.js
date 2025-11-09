@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useCallback } = React;
 
 const teamAbbreviations = {
   "Kansas City Chiefs": "KC",
@@ -388,6 +388,7 @@ function NFLScoresTracker() {
   const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
   const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
   const [showLogos, setShowLogos] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -522,15 +523,99 @@ function NFLScoresTracker() {
     }
   };
 
+  const refreshWeek = useCallback(async (weekNumber) => {
+    if (!weekNumber) return;
+
+    setIsRefreshing(true);
+    try {
+      // 1. Fetch scoreboard for the selected week
+      const weekResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
+      const data = await weekResponse.json();
+      const refreshedGames = transformEspnData(data);
+
+      // 2. Fetch summary data for games in that week
+      const gamesWithSummaryPromises = refreshedGames.map(async (game) => {
+        try {
+          const summaryResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${game.id}`);
+          const summaryData = await summaryResponse.json();
+
+          let homeWinProbability = null;
+          let awayWinProbability = null;
+          let homeMoneyLine = null;
+          let awayMoneyLine = null;
+
+          if (summaryData.pickcenter && summaryData.pickcenter.length > 0 && summaryData.pickcenter[0].moneyline) {
+              if(summaryData.pickcenter[0].moneyline.home && summaryData.pickcenter[0].moneyline.home.close) {
+                  homeMoneyLine = summaryData.pickcenter[0].moneyline.home.close.odds;
+              }
+              if(summaryData.pickcenter[0].moneyline.away && summaryData.pickcenter[0].moneyline.away.close) {
+                  awayMoneyLine = summaryData.pickcenter[0].moneyline.away.close.odds;
+              }
+          }
+
+          const gameStatus = game.status;
+
+          if (gameStatus === 'scheduled' || gameStatus === 'pre') {
+              if (summaryData.predictor && summaryData.predictor.homeTeam && summaryData.predictor.awayTeam) {
+                  homeWinProbability = summaryData.predictor.homeTeam.gameProjection * 1;
+                  awayWinProbability = summaryData.predictor.awayTeam.gameProjection * 1;
+              }
+          } else {
+              if (summaryData.winprobability && summaryData.winprobability.length > 0) {
+                  const winProbabilities = summaryData.winprobability;
+                  if (game.status === 'post') {
+                      homeWinProbability = winProbabilities[0].homeWinPercentage * 100;
+                      awayWinProbability = (1 - winProbabilities[0].homeWinPercentage) * 100;
+                  } else if (game.status === 'in' || game.status === 'live') {
+                      const latestWinProbability = winProbabilities[winProbabilities.length - 1];
+                      homeWinProbability = latestWinProbability.homeWinPercentage * 100;
+                      awayWinProbability = (1 - latestWinProbability.homeWinPercentage) * 100;
+                  }
+              }
+          }
+
+          return { ...game, homeWinProbability, awayWinProbability, homeMoneyLine, awayMoneyLine };
+        } catch (summaryError) {
+          return game; // Return original game if summary fetch fails
+        }
+      });
+      const gamesWithSummaries = await Promise.all(gamesWithSummaryPromises);
+
+      // 3. Update the weeks state immutably
+      setWeeks(currentWeeks => {
+        const newWeeks = [...currentWeeks];
+        const weekIndex = newWeeks.findIndex(w => w.week === weekNumber);
+        if (weekIndex !== -1) {
+          newWeeks[weekIndex] = {
+            ...newWeeks[weekIndex],
+            games: gamesWithSummaries
+          };
+        }
+        return newWeeks;
+      });
+
+    } catch (err) {
+      console.error("Refresh error:", err);
+      // Optionally set a temporary error message
+    } finally {
+      setIsRefreshing(false);
+      setLastUpdate(new Date());
+    }
+  }, []);
+
   useEffect(() => {
     fetchScores(); // Initial fetch
+  }, []);
 
-    const intervalId = setInterval(() => {
-      fetchScores(); // Fetch every 5 minutes
-    }, 5 * 60 * 1000); // 5 minutes
+  useEffect(() => {
+    if (selectedWeek) {
+      const intervalId = setInterval(() => {
+        refreshWeek(selectedWeek);
+      }, 5 * 60 * 1000); // 5 minutes
 
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  }, []); // Re-run if useMockData changes
+      return () => clearInterval(intervalId); // Cleanup on unmount
+    }
+  }, [selectedWeek, refreshWeek]);
 
   useEffect(() => {
     if (weeks.length > 0 && Object.keys(mockPicks).length > 0) {
@@ -754,8 +839,12 @@ function NFLScoresTracker() {
               )
             ),
             React.createElement("div", { className: "flex gap-2" },
-              React.createElement("button", { onClick: fetchScores, className: "px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white" },
-                "Refresh Scores"
+              React.createElement("button", { 
+                onClick: () => refreshWeek(selectedWeek), 
+                className: `px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`,
+                disabled: isRefreshing
+              },
+                isRefreshing ? "Refreshing..." : "Refresh Scores"
               ),
               React.createElement("button", {
                 onClick: () => setIncludeLiveGames(!includeLiveGames),
