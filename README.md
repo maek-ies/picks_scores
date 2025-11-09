@@ -11,6 +11,20 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 
 ## Recent Updates & Features
 
+*   **Week Overview Table Enhancements:**
+    *   Live game clock and period information is now displayed as a third row in the "Game" column, enclosed in parentheses and styled for better visibility.
+    *   The "Score" column now exclusively displays the game scores.
+    *   "Dev" column values are rounded to one decimal place for improved readability.
+    *   Fixed a React syntax error related to element rendering in the game column.
+
+*   **Player Column Tooltips:**
+    *   Added descriptive tooltips to the player column headers in the "Week Overview" table for:
+        *   "Total points for the season"
+        *   "Total points behind the leader"
+        *   "Points this week"
+        *   "Remaining potential points this week"
+
+
 *   **Win Probability Display:**
     *   Corrected win probability calculations for proper percentage display.
     *   Win probabilities are now displayed for both live and finished games, using the first observation for finished games.
