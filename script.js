@@ -387,7 +387,7 @@ function NFLScoresTracker() {
   const [deviationData, setDeviationData] = useState([]);
   const [deviationSortConfig, setDeviationSortConfig] = useState({ key: null, direction: 'ascending' });
   const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
-  const [showLogos, setShowLogos] = useState(false);
+  const [showLogos, setShowLogos] = useState(true);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -967,7 +967,7 @@ function NFLScoresTracker() {
 
                               return (
                                   React.createElement("td", { key: player, className: "px-2 py-1 text-center border-l border-slate-700/50" },
-                                      React.createElement("div", { className: `px-1 py-0 rounded text-sm font-semibold text-center ${
+                                      React.createElement("div", { className: `flex flex-col gap-px px-1 py-0 rounded text-sm font-semibold text-center ${
                                           isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
