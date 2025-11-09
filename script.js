@@ -926,74 +926,82 @@ function NFLScoresTracker() {
                                       }) : []).map((game) => {
                                         const isGameOfTheWeek = gamesOfTheWeek.includes(game.id);
                                         const live = isLive(game);
-                                        return (
-                                          React.createElement("tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'bg-green-500/10' : ''}` },                            React.createElement("td", { className: "px-2 py-1" },
-                            React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
-                              `${game.away} @ ${game.home}`,
-                              isGameOfTheWeek && (
-                                React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
-                              )
-                            ),
-                            game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
-                                React.createElement("div", { className: "text-xs text-slate-400" },
-                                    `${game.awayWinProbability.toFixed(1)}%-${game.homeWinProbability.toFixed(1)}%`
-                                )
-                            ) : null
-                          ),
-                          React.createElement("td", { className: "px-0 py-1" },
-                              game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
-                                React.createElement("span", { className: "text-white font-semibold" }, 
-                                  `${game.awayScore}-${game.homeScore}`,
-                                  (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
-                                    React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
-                                )
-                              ) : (
-                                getGameStatus(game) === 'Scheduled' && game.date ? (
-                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }))
-                                ) : (
-                                  React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
-                                )
-                              )
-                            )
-                          ),
-                          leaderboard.map(([player, data]) => {
-                              const detail = data.details.find(d => d.gameId === game.id);
-                              if (!detail) return React.createElement("td", { key: player, className: "px-2 py-3 text-center text-slate-500 border-l border-slate-700/50" }, "-");
-
-                              const isCorrect = detail.correct;
-                              const isWrong = detail.correct === false;
-                              const pickAbbr = detail.pick ? (teamAbbreviations[detail.pick] || detail.pick) : null;
-
-                              return (
-                                  React.createElement("td", { key: player, className: "px-2 py-1 text-center border-l border-slate-700/50" },
-                                      React.createElement("div", { className: `flex flex-col gap-px px-1 py-0 rounded text-sm font-semibold text-center ${
-                                          isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
-                                          isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
-                                          'bg-slate-700/50 text-slate-300 border border-slate-600'
-                                      }` },
-                                          showLogos && pickAbbr ?
-                                            React.createElement("img", {
-                                              src: `https://a.espncdn.com/i/teamlogos/nfl/500/${pickAbbr.toLowerCase()}.png`,
-                                              alt: detail.pick,
-                                              className: "w-6 h-6 mx-auto"
-                                            }) :
-                                            React.createElement("div", { }, pickAbbr || '-'),
-                                          React.createElement("div", { className: `text-xs ${
-                                              isCorrect ? 'text-green-400' :
-                                              isWrong ? 'text-red-400' :
-                                              'text-slate-300'
-                                          }` },
-                                              detail.confidence
+                                        const trChildren = [
+                                          React.createElement("td", { className: "px-2 py-1" },
+                                            React.createElement("div", { className: "text-white text-sm font-medium flex items-center gap-2" },
+                                              `${game.away} @ ${game.home}`,
+                                              isGameOfTheWeek && (
+                                                React.createElement("span", { className: "bg-yellow-500 text-slate-900 text-xs font-semibold px-2 py-0.5 rounded-full" }, "GotW")
+                                              )
+                                            ),
+                                            game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
+                                                React.createElement("div", { className: "text-xs text-slate-400" },
+                                                    `${game.awayWinProbability.toFixed(1)}%-${game.homeWinProbability.toFixed(1)}%`
+                                                )
+                                            ) : null
+                                          ),
+                                          React.createElement("td", { className: "px-0 py-1" },
+                                            React.createElement("div", { className: "text-sm" },
+                                              game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
+                                                React.createElement("span", { className: "text-white font-semibold" }, 
+                                                  `${game.awayScore}-${game.homeScore}`,
+                                                  (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
+                                                    React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
+                                                )
+                                              ) : (
+                                                getGameStatus(game) === 'Scheduled' && game.date ? (
+                                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }))
+                                                ) : (
+                                                  React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
+                                                )
+                                              )
+                                            )
                                           )
-                                      )
-                                  )
-                              );
-                          }),
-                          React.createElement("td", { className: "px-2 py-1 text-white" },
-                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
-                          )
-                        )
-                      );
+                                        ];
+
+                                        const playerTds = leaderboard.map(([player, data]) => {
+                                          const detail = data.details.find(d => d.gameId === game.id);
+                                          if (!detail) return React.createElement("td", { key: player, className: "px-2 py-3 text-center text-slate-500 border-l border-slate-700/50" }, "-");
+
+                                          const isCorrect = detail.correct;
+                                          const isWrong = detail.correct === false;
+                                          const pickAbbr = detail.pick ? (teamAbbreviations[detail.pick] || detail.pick) : null;
+
+                                          return (
+                                              React.createElement("td", { key: player, className: "px-2 py-1 text-center border-l border-slate-700/50" },
+                                                  React.createElement("div", { className: `flex flex-col gap-px px-1 py-0 rounded text-sm font-semibold text-center ${
+                                                      isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
+                                                      isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
+                                                      'bg-slate-700/50 text-slate-300 border border-slate-600'
+                                                  }` },
+                                                      showLogos && pickAbbr ?
+                                                        React.createElement("img", {
+                                                          src: `https://a.espncdn.com/i/teamlogos/nfl/500/${pickAbbr.toLowerCase()}.png`,
+                                                          alt: detail.pick,
+                                                          className: "w-6 h-6 mx-auto"
+                                                        }) :
+                                                        React.createElement("div", { }, pickAbbr || '-'),
+                                                      React.createElement("div", { className: `text-xs ${
+                                                          isCorrect ? 'text-green-400' :
+                                                          isWrong ? 'text-red-400' :
+                                                          'text-slate-300'
+                                                      }` },
+                                                          detail.confidence
+                                                      )
+                                                  )
+                                              )
+                                          );
+                                        });
+
+                                        trChildren.push(...playerTds);
+
+                                        trChildren.push(
+                                          React.createElement("td", { className: "px-2 py-1 text-white" },
+                                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
+                                          )
+                                        );
+
+                                        return React.createElement.apply(null, ["tr", { key: game.id, className: `border-b border-slate-700/50 hover:bg-slate-700/20 ${live ? 'bg-green-500/10' : ''}` }].concat(trChildren));
                     })
                   )
                 )
