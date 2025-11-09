@@ -362,7 +362,7 @@ function OddsTable({ weeks, selectedWeek }) {
                 React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, 
                   game.homeWinProbability && game.awayWinProbability ? 
-                  `Away: ${game.awayWinProbability.toFixed(1)}% / Home: ${game.homeWinProbability.toFixed(1)}%` : "N/A"
+                  `${game.awayWinProbability.toFixed(1)}% / ${game.homeWinProbability.toFixed(1)}%` : "N/A"
                 ),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, oddsDisplay)
               )
@@ -765,7 +765,7 @@ function NFLScoresTracker() {
                 }`
               },
                 React.createElement("span", { className: `w-2 h-2 rounded-full ${includeLiveGames ? 'bg-white animate-pulse' : 'bg-slate-500'}` }),
-                includeLiveGames ? 'Incl. live games' : 'Final Games Only'
+                includeLiveGames ? 'Incl. Live Games' : 'Final Games Only'
               ),
               React.createElement("select", { onChange: (e) => setSelectedWeek(parseInt(e.target.value)), value: selectedWeek, className: "bg-slate-700 text-white rounded-lg px-3 py-2" },
                 weeks.map(w => React.createElement("option", { key: w.week, value: w.week }, `Week ${w.week}`))
@@ -927,7 +927,7 @@ function NFLScoresTracker() {
                             ),
                             game.homeWinProbability !== null && game.awayWinProbability !== null && (isLive(game) || (game.status === 'final' || game.status === 'post')) ? (
                                 React.createElement("div", { className: "text-xs text-slate-400" },
-                                    `${game.away}: ${game.awayWinProbability.toFixed(1)}% / ${game.home}: ${game.homeWinProbability.toFixed(1)}%`
+                                    `${game.awayWinProbability.toFixed(1)}%-${game.homeWinProbability.toFixed(1)}%`
                                 )
                             ) : null
                           ),
@@ -957,12 +957,12 @@ function NFLScoresTracker() {
 
                               return (
                                   React.createElement("td", { key: player, className: "px-2 py-3 text-center border-l border-slate-700/50" },
-                                      React.createElement("div", { className: `inline-flex items-center gap-1.5 px-2 py-1 rounded text-sm font-semibold ${
+                                      React.createElement("div", { className: `flex flex-col px-2 py-1 rounded text-sm font-semibold ${
                                           isCorrect ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                                           isWrong ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                                           'bg-slate-700/50 text-slate-300 border border-slate-600'
                                       }` },
-                                          React.createElement("span", null, teamAbbreviations[detail.pick] || detail.pick),
+                                          React.createElement("span", { className: "text-center" }, teamAbbreviations[detail.pick] || detail.pick),
                                           React.createElement("span", { className: `text-xs px-1.5 py-0.5 rounded ${
                                               isCorrect ? 'bg-green-500 text-white' :
                                               isWrong ? 'bg-red-500 text-white' :
