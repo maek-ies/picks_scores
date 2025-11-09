@@ -45,9 +45,23 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 *   **GitHub Actions Workflow (`.github/workflows/run_picks_extract.yml`):**
     *   Modified the workflow to trigger only on schedule or when `process_picks_gh.R` is committed, removing the `pull_request` trigger.
 
-## Future Enhancements (To-Do List)
+## Enhancements Status
 
-1.  Add a chart with cumulative points over weeks.
-2.  Add an average deviation table by game.
-3.  Add an "Odds" tab to integrate betting odds data.
-4.  Integrate FPI (Football Power Index) picks.
+*   **Charts Tab Enhancements:**
+    *   Organize charts by sub-tab.
+    *   Close tables by default.
+    *   Improve current charts' visual presentation and functionality.
+    *   Add more charts.
+### Completed Enhancements
+
+*   [x] Added a chart with cumulative points over weeks.
+*   [x] Added an average deviation table by game.
+*   [x] Added an "Odds" tab to integrate betting odds data.
+
+### Future Enhancements
+
+*   Integrate FPI (Football Power Index) picks.
+*   Consider removing space in game name.
+*   Consider better visualization of Game of the week (e.g., color instead of badge).
+*   Find alternative for tooltips on mobiles.
+*   Work on odds tab to be usable for picking games (e.g. picks by source + average).
