@@ -908,14 +908,6 @@ function NFLScoresTracker() {
                   React.createElement("thead", null,
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
                       React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "Game"),
-                      React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm" }, "Result"),
-                      React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => {
-                        setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' }));
-                        setPlayerSortConfig({ key: null, direction: 'ascending' });
-                      }},
-                          "Dev",
-                          deviationSortConfig.key === 'dev' && (deviationSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
-                      ),
                       leaderboard.map(([player, data], idx) => {
                         const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
                         const pointsBehind = firstPlacePoints - data.total;
@@ -928,7 +920,14 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "text-xs text-blue-400" }, `Remaining: ${data.remainingPossible}`)
                           )
                         );
-                      })
+                      }),
+                      React.createElement("th", { className: "px-2 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => {
+                        setDeviationSortConfig(current => ({ key: 'dev', direction: current.key === 'dev' && current.direction === 'ascending' ? 'descending' : 'ascending' }));
+                        setPlayerSortConfig({ key: null, direction: 'ascending' });
+                      }},
+                          "Dev",
+                          deviationSortConfig.key === 'dev' && (deviationSortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC')
+                      )
                     )
                   ),
                   React.createElement("tbody", null,
@@ -981,26 +980,6 @@ function NFLScoresTracker() {
                                 )
                             ) : null
                           ),
-                          React.createElement("td", { className: "px-2 py-3" },
-                            React.createElement("div", { className: "text-sm" },
-                              game.status === 'final' || game.status === 'post' || (includeLiveGames && (game.status === 'in' || game.status === 'live')) ? (
-                                React.createElement("span", { className: "text-white font-semibold" }, 
-                                  `${game.awayScore}-${game.homeScore}`,
-                                  (game.status === 'in' || game.status === 'live') && game.displayClock && game.period && 
-                                    React.createElement("span", { className: "text-xs text-slate-400" }, ` (Q${game.period} - ${game.displayClock.split(' - ')[0]})`)
-                                )
-                              ) : (
-                                getGameStatus(game) === 'Scheduled' && game.date ? (
-                                  React.createElement("span", { className: "text-slate-400 text-xs" }, new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(game.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
-                                ) : (
-                                  React.createElement("span", { className: "text-slate-400 text-xs" }, "-")
-                                )
-                              )
-                            )
-                          ),
-                          React.createElement("td", { className: "px-2 py-3 text-white" },
-                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
-                          ),
                           leaderboard.map(([player, data]) => {
                               const detail = data.details.find(d => d.gameId === game.id);
                               if (!detail) return React.createElement("td", { key: player, className: "px-2 py-3 text-center text-slate-500 border-l border-slate-700/50" }, "-");
@@ -1026,7 +1005,10 @@ function NFLScoresTracker() {
                                       )
                                   )
                               );
-                          })
+                          }),
+                          React.createElement("td", { className: "px-2 py-3 text-white" },
+                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(2) : "N/A"
+                          )
                         )
                       );
                     })
