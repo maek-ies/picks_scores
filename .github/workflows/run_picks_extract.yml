@@ -1,4 +1,4 @@
-7name: Extract picks test
+name: Extract picks test
 
 on:
   push:
