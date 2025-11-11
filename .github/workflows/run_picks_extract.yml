@@ -1,4 +1,4 @@
-name: Extract picks test
+7name: Extract picks test
 
 on:
   push:
@@ -95,7 +95,7 @@ jobs:
           git config --global user.name 'Your Name'
           git config --global user.email 'your-username@users.noreply.github.com'
           #git stash
-          git pull
+          #git pull
           #git stash pop
           git add -A
           git commit -m "save commit"
