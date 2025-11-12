@@ -1,5 +1,27 @@
 const { useState, useEffect, useCallback } = React;
 
+const convertOddsToProbability = (odds) => {
+  if (typeof odds === 'string') {
+    if (odds.toUpperCase() === 'EVEN') {
+      odds = 100;
+    } else {
+      odds = parseFloat(odds);
+    }
+  }
+
+  if (isNaN(odds)) {
+    return null;
+  }
+
+  if (odds > 0) {
+    return 100 / (odds + 100);
+  } else if (odds < 0) {
+    return Math.abs(odds) / (Math.abs(odds) + 100);
+  } else { // odds === 0 or was 'EVEN' which becomes 100
+    return 0.5;
+  }
+};
+
 const teamAbbreviations = {
   "Kansas City Chiefs": "KC",
   "Denver Broncos": "DEN",
@@ -25,17 +47,28 @@ const teamAbbreviations = {
   "Pittsburgh Steelers": "PIT",
 };
 
-function WeeklyPointsChart({ confidenceResults }) {
+function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
-  const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
+
+  const filteredConfidenceResults = {};
+  players.forEach(player => {
+    if (confidenceResults[player]) {
+      filteredConfidenceResults[player] = {
+        ...confidenceResults[player],
+        pointsPerWeek: confidenceResults[player].pointsPerWeek.filter(p => p.week <= selectedWeek)
+      };
+    }
+  });
+
+  const weeks = filteredConfidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = Math.max(1, ...Object.values(filteredConfidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
 
   const chartWidth = 800;
   const chartHeight = 400;
   const padding = 50;
 
-  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length > 1 ? weeks.length - 1 : 1);
   const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
@@ -49,16 +82,18 @@ function WeeklyPointsChart({ confidenceResults }) {
     let minDistance = Infinity;
 
     players.forEach((player, playerIndex) => {
-      confidenceResults[player].pointsPerWeek.forEach(d => {
-        const pointX = xScale(d.week);
-        const pointY = yScale(d.points);
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+      if (filteredConfidenceResults[player]) {
+        filteredConfidenceResults[player].pointsPerWeek.forEach(d => {
+          const pointX = xScale(d.week);
+          const pointY = yScale(d.points);
+          const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
 
-        if (distance < minDistance && distance < 20) {
-          minDistance = distance;
-          closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
-        }
-      });
+          if (distance < minDistance && distance < 20) {
+            minDistance = distance;
+            closestPoint = { player, week: d.week, points: d.points, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+          }
+        });
+      }
     });
 
     setActivePoint(closestPoint);
@@ -87,12 +122,12 @@ function WeeklyPointsChart({ confidenceResults }) {
 
         // Lines
         players.map((player, playerIndex) => (
-          React.createElement("polyline", {
+          filteredConfidenceResults[player] && React.createElement("polyline", {
             key: player,
             fill: "none",
             stroke: colors[playerIndex % colors.length],
             strokeWidth: 2,
-            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
+            points: filteredConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
           })
         )),
 
@@ -178,17 +213,28 @@ function WeeklyPointsTable({ confidenceResults }) {
     );
 }
 
-function CumulativePointsChart({ confidenceResults }) {
+function CumulativePointsChart({ confidenceResults, selectedWeek }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
-  const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(confidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
+
+  const filteredConfidenceResults = {};
+  players.forEach(player => {
+    if (confidenceResults[player]) {
+      filteredConfidenceResults[player] = {
+        ...confidenceResults[player],
+        pointsPerWeek: confidenceResults[player].pointsPerWeek.filter(p => p.week <= selectedWeek)
+      };
+    }
+  });
+
+  const weeks = filteredConfidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = Math.max(1, ...Object.values(filteredConfidenceResults).flatMap(p => p.pointsPerWeek.map(w => Math.abs(w.relativePoints))));
 
   const chartWidth = 800;
   const chartHeight = 400;
   const padding = 50;
 
-  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length - 1);
+  const xScale = (week) => padding + (week - 1) * (chartWidth - 2 * padding) / (weeks.length > 1 ? weeks.length - 1 : 1);
   const yScale = (points) => chartHeight - padding - ((points + maxPoints) / (maxPoints * 2)) * (chartHeight - 2 * padding);
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
@@ -202,16 +248,18 @@ function CumulativePointsChart({ confidenceResults }) {
     let minDistance = Infinity;
 
     players.forEach((player, playerIndex) => {
-      confidenceResults[player].pointsPerWeek.forEach(d => {
-        const pointX = xScale(d.week);
-        const pointY = yScale(d.relativePoints);
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+      if (filteredConfidenceResults[player]) {
+        filteredConfidenceResults[player].pointsPerWeek.forEach(d => {
+          const pointX = xScale(d.week);
+          const pointY = yScale(d.relativePoints);
+          const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
 
-        if (distance < minDistance && distance < 20) {
-          minDistance = distance;
-          closestPoint = { player, week: d.week, relativePoints: d.relativePoints, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
-        }
-      });
+          if (distance < minDistance && distance < 20) {
+            minDistance = distance;
+            closestPoint = { player, week: d.week, relativePoints: d.relativePoints, x: pointX, y: pointY, color: colors[playerIndex % colors.length] };
+          }
+        });
+      }
     });
 
     setActivePoint(closestPoint);
@@ -240,12 +288,12 @@ function CumulativePointsChart({ confidenceResults }) {
 
         // Lines
         players.map((player, playerIndex) => (
-          React.createElement("polyline", {
+          filteredConfidenceResults[player] && React.createElement("polyline", {
             key: player,
             fill: "none",
             stroke: colors[playerIndex % colors.length],
             strokeWidth: 2,
-            points: confidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.relativePoints)}`).join(' ')
+            points: filteredConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.relativePoints)}`).join(' ')
           })
         )),
 
@@ -332,7 +380,137 @@ function CumulativePointsTable({ confidenceResults }) {
     );
 }
 
+function GamesOfTheWeekPointsChart({ confidenceResults }) {
+    const players = Object.keys(confidenceResults).sort((a, b) => confidenceResults[b].gotwPoints - confidenceResults[a].gotwPoints);
+    const playerGotwPoints = players.map(player => confidenceResults[player].gotwPoints);
+  const maxPoints = Math.max(1, ...playerGotwPoints);
+
+  const chartWidth = 800;
+  const chartHeight = 400;
+  const padding = 50;
+
+  const xScale = (index) => padding + index * (chartWidth - 2 * padding) / (players.length - 1);
+  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Games of the Week Points"),
+      React.createElement("svg", { width: chartWidth, height: chartHeight },
+        // X-axis
+        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        players.map((player, index) => (
+          React.createElement("text", { key: player, x: xScale(index), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, player)
+        )),
+
+        // Y-axis
+        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+        Array.from({ length: 5 }).map((_, i) => {
+          const points = Math.round(maxPoints / 4 * i);
+          if (i === 4 && playerGotwPoints.length > 0 && points === playerGotwPoints[0]) {
+            return null;
+          }
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+        }),
+
+        // Bars
+        players.map((player, index) => {
+          const points = confidenceResults[player].gotwPoints;
+          const barWidth = (chartWidth - 2 * padding) / players.length / 2;
+          const barX = xScale(index) - barWidth / 2;
+          const barHeight = chartHeight - padding - yScale(points);
+          const barY = yScale(points);
+
+          return (
+            React.createElement("g", { key: player },
+              React.createElement("rect", {
+                x: barX,
+                y: barY,
+                width: barWidth,
+                height: barHeight,
+                fill: colors[index % colors.length],
+                rx: 4 // rounded corners
+              }),
+              React.createElement("text", {
+                x: barX + barWidth / 2,
+                y: barY - 5,
+                fill: "#fff",
+                textAnchor: "middle",
+                fontSize: "12px"
+              }, points)
+            )
+          );
+        })
+      )
+    )
+  );
+}
+
+function GamesOfTheWeekPointsTable({ mockPicks, weeks, gamesOfTheWeek, includeLiveGames }) {
+    const players = Object.keys(mockPicks);
+
+    const gotwGames = weeks.flatMap(weekData =>
+        weekData.games
+            .filter(game => gamesOfTheWeek.includes(game.id))
+            .map(game => ({ ...game, week: weekData.week }))
+    );
+
+    return (
+        React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
+            React.createElement("h2", { className: "text-xl font-bold text-white mb-4 p-6" }, "Games of the Week Details"),
+            React.createElement("table", { className: "w-full" },
+                React.createElement("thead", null,
+                    React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Week"),
+                        React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
+                        players.map(player =>
+                            React.createElement("th", { key: player, className: "px-4 py-3 text-center text-white font-semibold text-sm" }, player)
+                        )
+                    )
+                ),
+                React.createElement("tbody", null,
+                    gotwGames.map(game => (
+                        React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                            React.createElement("td", { className: "px-4 py-3 text-white" }, game.week),
+                            React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
+                            players.map(player => {
+                                const playerPicks = mockPicks[player];
+                                const pick = playerPicks.find(p => p.gameId === game.id);
+                                if (!pick) return React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, "-");
+
+                                const isComplete = game.status === 'final' || game.status === 'post';
+                                const isLiveGame = game.status === 'in' || game.status === 'live';
+
+                                let winner = null;
+                                if (isComplete) {
+                                    winner = game.winner;
+                                } else if (includeLiveGames && isLiveGame) {
+                                    if (game.homeScore > game.awayScore) winner = game.home;
+                                    else if (game.awayScore > game.homeScore) winner = game.away;
+                                }
+
+                                const pickAbbreviation = teamAbbreviations[pick.pick] || pick.pick;
+                                const isCorrect = winner === pickAbbreviation;
+
+                                let points = 0;
+                                if ((isComplete || (includeLiveGames && isLiveGame)) && isCorrect) {
+                                    points = pick.confidence + 5;
+                                }
+
+                                return React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, points);
+                            })
+                        )
+                    ))
+                )
+            )
+        )
+    );
+}
+
 function OddsTable({ weeks, selectedWeek }) {
+  const [sortConfig, setSortConfig] = useState({ key: 'fpiConfidence', direction: 'ascending' });
+
   if (!selectedWeek) return null;
 
   const weekData = weeks.find(w => w.week === selectedWeek);
@@ -341,30 +519,123 @@ function OddsTable({ weeks, selectedWeek }) {
     return React.createElement("div", { className: "text-white text-center py-10" }, "Data for this week is not available yet.");
   }
 
+  const sortedGames = React.useMemo(() => {
+    let sortableGames = [...weekData.games];
+
+    // Pre-calculate derived values for sorting
+    sortableGames = sortableGames.map(game => {
+      const absDiff = (game.homeWinProbability && game.awayWinProbability)
+        ? Math.abs(game.homeWinProbability - game.awayWinProbability)
+        : -1;
+      const awayML_WP = convertOddsToProbability(game.awayMoneyLine);
+      const homeML_WP = convertOddsToProbability(game.homeMoneyLine);
+      const absMlDiff = (awayML_WP && homeML_WP) ? Math.abs(awayML_WP - homeML_WP) : -1;
+      return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff };
+    });
+
+    // Create ranks for fpiConfidence
+    const rankedByFpi = [...sortableGames].sort((a, b) => a.absDiff - b.absDiff);
+    const fpiRanks = {};
+    rankedByFpi.forEach((game, index) => {
+      fpiRanks[game.id] = game.absDiff === -1 ? Infinity : index + 1;
+    });
+
+    // Create ranks for mlConfidence
+    const rankedByMl = [...sortableGames].sort((a, b) => a.absMlDiff - b.absMlDiff);
+    const mlRanks = {};
+    rankedByMl.forEach((game, index) => {
+      mlRanks[game.id] = game.absMlDiff === -1 ? Infinity : index + 1;
+    });
+
+    sortableGames = sortableGames.map(game => ({
+      ...game,
+      fpiConfidence: fpiRanks[game.id],
+      mlConfidence: mlRanks[game.id]
+    }));
+
+
+    if (sortConfig.key !== null) {
+      sortableGames.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        // Handle N/A or null values
+        if (aValue === null || aValue === "N/A" || aValue === Infinity || isNaN(aValue)) aValue = sortConfig.direction === 'ascending' ? Infinity : -Infinity;
+        if (bValue === null || bValue === "N/A" || bValue === Infinity || isNaN(bValue)) bValue = sortConfig.direction === 'ascending' ? Infinity : -Infinity;
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableGames;
+  }, [weekData.games, sortConfig]);
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC';
+    }
+    return null;
+  };
+
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
       React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Odds for Week ${selectedWeek}`),
       React.createElement("table", { className: "w-full" },
         React.createElement("thead", null,
           React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Game"),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Win Probability"),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm" }, "Moneyline")
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('away') }, "Game", getSortIndicator('away')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayWinProbability') }, "Away WP", getSortIndicator('awayWinProbability')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeWinProbability') }, "Home WP", getSortIndicator('homeWinProbability')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absDiff') }, "Abs Diff", getSortIndicator('absDiff')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiConfidence') }, "FPI Conf.", getSortIndicator('fpiConfidence')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayMoneyLine') }, "Away ML", getSortIndicator('awayMoneyLine')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeMoneyLine') }, "Home ML", getSortIndicator('homeMoneyLine')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayML_WP') }, "Away ML WP", getSortIndicator('awayML_WP')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeML_WP') }, "Home ML WP", getSortIndicator('homeML_WP')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absMlDiff') }, "Abs ML Diff", getSortIndicator('absMlDiff')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlConfidence') }, "ML Conf.", getSortIndicator('mlConfidence'))
           )
         ),
         React.createElement("tbody", null,
-          weekData.games.map(game => {
-            const homeML = game.homeMoneyLine;
-            const awayML = game.awayMoneyLine;
-            const oddsDisplay = homeML && awayML ? `Away: ${awayML} / Home: ${homeML}` : "N/A";
+          sortedGames.map(game => {
+            const absDiffDisplay = game.absDiff !== -1 ? game.absDiff.toFixed(1) + '%' : "N/A";
+            const absMlDiffDisplay = game.absMlDiff !== -1 ? `${(game.absMlDiff * 100).toFixed(1)}%` : "N/A";
+
             return (
               React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
                 React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, 
-                  game.homeWinProbability && game.awayWinProbability ? 
-                  `${game.awayWinProbability.toFixed(1)}% / ${game.homeWinProbability.toFixed(1)}%` : "N/A"
+                React.createElement("td", { className: "px-4 py-3 text-white" },
+                  game.awayWinProbability ? `${game.awayWinProbability.toFixed(1)}%` : "N/A"
                 ),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, oddsDisplay)
+                React.createElement("td", { className: "px-4 py-3 text-white" },
+                  game.homeWinProbability ? `${game.homeWinProbability.toFixed(1)}%` : "N/A"
+                ),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, absDiffDisplay),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiConfidence === Infinity ? "N/A" : game.fpiConfidence),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.awayMoneyLine || "N/A"),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.homeMoneyLine || "N/A"),
+                React.createElement("td", { className: "px-4 py-3 text-white" },
+                  game.awayML_WP ? `${(game.awayML_WP * 100).toFixed(1)}%` : "N/A"
+                ),
+                React.createElement("td", { className: "px-4 py-3 text-white" },
+                  game.homeML_WP ? `${(game.homeML_WP * 100).toFixed(1)}%` : "N/A"
+                ),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, absMlDiffDisplay),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlConfidence === Infinity ? "N/A" : game.mlConfidence)
               )
             )
           })
@@ -389,6 +660,7 @@ function NFLScoresTracker() {
   const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
   const [showLogos, setShowLogos] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeChartTab, setActiveChartTab] = useState('points-per-week');
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -627,7 +899,7 @@ function NFLScoresTracker() {
     const results = {};
 
     Object.keys(mockPicks).forEach(player => {
-      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0 };
+      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0, gotwPoints: 0, pointsLost: 0 };
     });
 
     weeks.forEach(weekData => {
@@ -684,6 +956,9 @@ function NFLScoresTracker() {
             }
             weeklyPoints[player] += confidence;
             results[player].correct++;
+            if (gamesOfTheWeek.includes(game.id)) {
+              results[player].gotwPoints += confidence;
+            }
           }
           
           if (weekData.week === selectedWeek) {
@@ -755,6 +1030,16 @@ function NFLScoresTracker() {
         });
       }
     }
+
+    Object.keys(results).forEach(player => {
+      const lost = results[player].details.reduce((acc, detail) => {
+        if (detail.correct === false) {
+          return acc + detail.confidence;
+        }
+        return acc;
+      }, 0);
+      results[player].pointsLost = lost;
+    });
 
     return results;
   };
@@ -833,7 +1118,7 @@ function NFLScoresTracker() {
         React.createElement("div", { className: "max-w-7xl mx-auto px-4 py-4" },
           React.createElement("div", { className: "flex items-center justify-between flex-wrap gap-4" },
             React.createElement("div", { className: "flex items-center gap-3" },
-              React.createElement("span", null, "\uD83D\uDCFA"),
+              React.createElement("span", null, "\uD83C\uDFC8"),
               React.createElement("div", null,
                 React.createElement("h1", { className: "text-2xl font-bold text-white" }, "NFL Pickem Live Tracker"),
               )
@@ -921,11 +1206,39 @@ function NFLScoresTracker() {
             )
           )
         ) : activeTab === 'chart' ? (
-          React.createElement("div", null, 
-            React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults }),
-            React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults }),
-            React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults }),
-            React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
+          React.createElement("div", null,
+            React.createElement("div", { className: "flex gap-2 mb-4" },
+              React.createElement("button", {
+                onClick: () => setActiveChartTab('points-per-week'),
+                className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeChartTab === 'points-per-week' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                }`
+              }, "Points per Week"),
+              React.createElement("button", {
+                onClick: () => setActiveChartTab('cumulative-points'),
+                className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeChartTab === 'cumulative-points' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                }`
+              }, "Cumulative Points vs. Leader"),
+              React.createElement("button", {
+                onClick: () => setActiveChartTab('gotw-points'),
+                className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeChartTab === 'gotw-points' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                }`
+              }, "GOTW Points")
+            ),
+            activeChartTab === 'points-per-week' && React.createElement("div", null,
+              React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
+              React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults })
+            ),
+            activeChartTab === 'cumulative-points' && React.createElement("div", null,
+              React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
+              React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
+            ),
+            activeChartTab === 'gotw-points' && React.createElement("div", null,
+              React.createElement(GamesOfTheWeekPointsChart, { confidenceResults: confidenceResults }),
+              React.createElement(GamesOfTheWeekPointsTable, { mockPicks: mockPicks, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, includeLiveGames: includeLiveGames })
+            )
           )
         ) : activeTab === 'odds' ? (
           React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
@@ -947,6 +1260,7 @@ function NFLScoresTracker() {
                             React.createElement("div", { className: "text-yellow-400 text-xs font-bold mt-1", title: "Total points for the season" }, data.total),
                             idx === 0 ? React.createElement("div", { className: "text-xs text-green-400", title: "Total points behind the leader" }, "Lead") : pointsBehind > 0 && React.createElement("div", { className: "text-xs text-red-400", title: "Total points behind the leader" }, `-${pointsBehind}`),
                             React.createElement("div", { className: "text-slate-400 text-xs", title: "Points this week" }, `${data.weekly}`),
+                            React.createElement("div", { className: "text-xs text-orange-400", title: "Points lost this week" }, `-${data.pointsLost}`),
                             React.createElement("div", { className: "text-xs text-blue-400", title: "Remaining potential points this week" }, `${data.remainingPossible}`)
                           )
                         );
@@ -1071,7 +1385,7 @@ function NFLScoresTracker() {
 
                                         trChildren.push(
                                           React.createElement("td", { className: "px-2 py-1 text-white" },
-                                            deviationData.find(d => d.gameId === game.id) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(1) : "N/A"
+                                            (deviationData.find(d => d.gameId === game.id) && !isNaN(deviationData.find(d => d.gameId === game.id).avgDeviation)) ? deviationData.find(d => d.gameId === game.id).avgDeviation.toFixed(1) : ""
                                           )
                                         );
 

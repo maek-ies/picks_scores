@@ -11,6 +11,28 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 
 ## Recent Updates & Features
 
+*   **Charts and Odds Tab Enhancements (2025-11-12):**
+    *   **Charts Tab:**
+        *   The "Points per Week" and "Cumulative Points vs. Leader" line charts now only display data up to the currently selected week, preventing extrapolation to week 18.
+    *   **Odds Tab:**
+        *   The "Win Probability" column was split into "Away WP" and "Home WP".
+        *   Added an "Abs Diff" column showing the absolute difference between "Away WP" and "Home WP".
+        *   Added an "FPI Conf." column with a rank based on the "Abs Diff" (lower difference is a lower rank).
+        *   The "Moneyline" column was split into "awayML" and "homeML".
+        *   Added "awayML_WP" and "homeML_WP" columns showing win probabilities converted from the moneyline odds.
+        *   Added an "Abs ML Diff" column showing the absolute difference between "awayML_WP" and "homeML_WP".
+        *   Added an "ML Conf." column with a rank based on the "Abs ML Diff".
+        *   Implemented sorting for all columns in the "Odds" tab.
+
+*   **Charts Tab Refactoring & GOTW Chart:**
+    *   The "Charts" tab has been reorganized into three sub-tabs: "Points per Week", "Cumulative Points vs. Leader", and "GOTW Points".
+    *   The "GOTW Points" sub-tab now features an improved bar chart and a detailed table.
+    *   The bar chart correctly reflects total points, with bars sorted in descending order and a value label on top of each bar.
+    *   Fixed a bug that caused a duplicate label to appear on the first bar.
+*   **UI/UX Enhancements:**
+    *   The "Dev" column in the "Week Overview" table now displays an empty string for `NaN` values.
+    *   The TV icon in the main title has been replaced with an American football icon (🏈).
+    *   Added a "Points Lost" metric to the player column headers in the "Week Overview" table.
 *   **Week Overview Table Enhancements:**
     *   Live game clock and period information is now displayed as a third row in the "Game" column, enclosed in parentheses and styled for better visibility.
     *   The "Score" column now exclusively displays the game scores.
@@ -48,7 +70,6 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 ## Enhancements Status
 
 *   **Charts Tab Enhancements:**
-    *   Organize charts by sub-tab.
     *   Close tables by default.
     *   Improve current charts' visual presentation and functionality.
     *   Add more charts.
@@ -57,6 +78,7 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 *   [x] Added a chart with cumulative points over weeks.
 *   [x] Added an average deviation table by game.
 *   [x] Added an "Odds" tab to integrate betting odds data.
+*   [x] Organize charts by sub-tab.
 
 ### Future Enhancements
 
