@@ -156,14 +156,14 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek, weeks: allWeeks, g
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
         weeks.map(week => (
-          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle", className: "chart-text" }, `W${week}`)
         )),
 
         // Y-axis
         React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
         Array.from({ length: 5 }).map((_, i) => {
           const points = Math.round(maxPoints / 4 * i);
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, `${points}${pointsPerWeekDisplayMode !== 'absolute' ? '%' : ''}`);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end", className: "chart-text" }, `${points}${pointsPerWeekDisplayMode !== 'absolute' ? '%' : ''}`);
         }),
 
         // Lines
@@ -181,15 +181,15 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek, weeks: allWeeks, g
         activePoint && React.createElement("g", null,
           React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
           React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points.toFixed(pointsPerWeekDisplayMode !== 'absolute' ? 1 : 0)}${pointsPerWeekDisplayMode !== 'absolute' ? '%' : ' pts'}`)
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff", className: "chart-text" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8", className: "chart-text" }, `W${activePoint.week}: ${activePoint.points.toFixed(pointsPerWeekDisplayMode !== 'absolute' ? 1 : 0)}${pointsPerWeekDisplayMode !== 'absolute' ? '%' : ' pts'}`)
         ),
 
         // Legend
         players.map((player, playerIndex) => (
           React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
             React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
-            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8", className: "chart-text" }, player)
           )
         ))
       )
@@ -380,14 +380,14 @@ function CumulativePointsChart({ confidenceResults, selectedWeek }) {
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
         weeks.map(week => (
-          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, `W${week}`)
+          React.createElement("text", { key: week, x: xScale(week), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle", className: "chart-text" }, `W${week}`)
         )),
 
         // Y-axis
         React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
         Array.from({ length: 5 }).map((_, i) => {
           const points = Math.round(-maxPoints + (i * maxPoints / 2));
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end", className: "chart-text" }, points);
         }),
 
         // Lines
@@ -405,15 +405,15 @@ function CumulativePointsChart({ confidenceResults, selectedWeek }) {
         activePoint && React.createElement("g", null,
           React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
           React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.relativePoints} pts`)
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff", className: "chart-text" }, `${activePoint.player}`),
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8", className: "chart-text" }, `W${activePoint.week}: ${activePoint.relativePoints} pts`)
         ),
 
         // Legend
         players.map((player, playerIndex) => (
           React.createElement("g", { key: player, transform: `translate(${chartWidth - 100}, ${padding + playerIndex * 20})` },
             React.createElement("rect", { x: 0, y: 0, width: 10, height: 10, fill: colors[playerIndex % colors.length] }),
-            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8" }, player)
+            React.createElement("text", { x: 15, y: 10, fill: "#94a3b8", className: "chart-text" }, player)
           )
         ))
       )
@@ -543,7 +543,7 @@ function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesO
                 // X-axis
                 React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
                 chartData.map(({ player }, index) => (
-                    React.createElement("text", { key: player, x: xScale(index), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, player)
+                    React.createElement("text", { key: player, x: xScale(index), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle", className: "chart-text" }, player)
                 )),
 
                 // Y-axis
@@ -575,7 +575,7 @@ function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesO
                                 y: barY - 5,
                                 fill: "#fff",
                                 textAnchor: "middle",
-                                fontSize: "12px"
+                                className: "chart-text"
                             }, gotwDisplayMode === 'absolute' ? value : `${value.toFixed(1)}%`)
                         )
                     );

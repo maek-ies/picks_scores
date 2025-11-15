@@ -11,6 +11,13 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 
 ## Recent Updates & Features
 
+*   **Chart UI Enhancements (2025-11-15):**
+    *   Renamed the "Odds" tab to "Win Probs.".
+    *   Removed titles from all charts in the "Charts" tab for a cleaner look.
+    *   Moved the view-mode toggle buttons to the top-right corner of the "Points per Week" and "GotW Points" charts.
+    *   Standardized the height of the "GotW Points" chart to match the other charts.
+    *   Implemented a centralized CSS class (`.chart-text`) to control chart font sizes, with the current size set to 36px.
+
 *   **Charts and Odds Tab Enhancements (2025-11-12):**
     *   **Charts Tab:**
         *   The "Points per Week" and "Cumulative Points vs. Leader" line charts now only display data up to the currently selected week, preventing extrapolation to week 18.
