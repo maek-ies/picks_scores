@@ -22,6 +22,109 @@ const convertOddsToProbability = (odds) => {
   }
 };
 
+const calculateGameConfidence = (games) => {
+  let processedGames = games.map(game => {
+    const absDiff = (game.homeWinProbability && game.awayWinProbability)
+      ? Math.abs(game.homeWinProbability - game.awayWinProbability)
+      : -1;
+
+    const rawAwayML_WP = convertOddsToProbability(game.awayMoneyLine);
+    const rawHomeML_WP = convertOddsToProbability(game.homeMoneyLine);
+
+    let awayML_WP = null;
+    let homeML_WP = null;
+
+    if (rawAwayML_WP !== null && rawHomeML_WP !== null) {
+      const totalProb = rawAwayML_WP + rawHomeML_WP;
+      if (totalProb > 0) {
+        awayML_WP = rawAwayML_WP / totalProb;
+        homeML_WP = rawHomeML_WP / totalProb;
+      } else {
+        awayML_WP = rawAwayML_WP;
+        homeML_WP = rawHomeML_WP;
+      }
+    }
+
+    const absMlDiff = (awayML_WP && homeML_WP) ? Math.abs(awayML_WP - homeML_WP) : -1;
+
+    const fpiPick = (game.homeWinProbability !== null && game.awayWinProbability !== null)
+      ? (game.homeWinProbability > game.awayWinProbability ? game.home : game.away)
+      : null;
+    const mlPick = (rawAwayML_WP !== null && rawHomeML_WP !== null)
+      ? (rawAwayML_WP < rawHomeML_WP ? game.home : game.away)
+      : null;
+
+    // Aggregate calculations (these are not strictly needed for FPI/ML players but are part of the original logic)
+    const aggAwayScore = (game.awayWinProbability || 0) + ((awayML_WP || 0) * 100);
+    const aggHomeScore = (game.homeWinProbability || 0) + ((homeML_WP || 0) * 100);
+    const totalScore = aggAwayScore + aggHomeScore;
+
+    const aggAwayWP = totalScore > 0 ? (aggAwayScore / totalScore) * 100 : null;
+    const aggHomeWP = totalScore > 0 ? (aggHomeScore / totalScore) * 100 : null;
+    const aggAbsDiff = (aggAwayWP !== null && aggHomeWP !== null) ? Math.abs(aggAwayWP - aggHomeWP) : -1;
+    const aggPick = aggAwayWP > aggHomeWP ? game.away : game.home;
+
+
+    return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff, fpiPick, mlPick, aggAwayWP, aggHomeWP, aggAbsDiff, aggPick };
+  });
+
+  // Create ranks for fpiConfidence
+  const rankedByFpi = [...processedGames].sort((a, b) => a.absDiff - b.absDiff);
+  const fpiRanks = {};
+  rankedByFpi.forEach((game, index) => {
+    fpiRanks[game.id] = game.absDiff === -1 ? Infinity : index + 1;
+  });
+
+  // Create ranks for mlConfidence
+  const rankedByMl = [...processedGames].sort((a, b) => a.absMlDiff - b.absMlDiff);
+  const mlRanks = {};
+  rankedByMl.forEach((game, index) => {
+    mlRanks[game.id] = game.absMlDiff === -1 ? Infinity : index + 1;
+  });
+
+  // Create ranks for aggConfidence
+  const rankedByAgg = [...processedGames].sort((a, b) => a.aggAbsDiff - b.aggAbsDiff);
+  const aggRanks = {};
+  rankedByAgg.forEach((game, index) => {
+    aggRanks[game.id] = game.aggAbsDiff === -1 ? Infinity : index + 1;
+  });
+
+  processedGames = processedGames.map(game => ({
+    ...game,
+    fpiConfidence: fpiRanks[game.id],
+    mlConfidence: mlRanks[game.id],
+    aggConfidence: aggRanks[game.id]
+  }));
+
+  // Calculate modelDisagreement (also part of original logic, keep for now)
+  processedGames = processedGames.map(game => {
+    let modelDisagreement = null;
+    if (game.homeWinProbability !== null && game.homeML_WP !== null) {
+      const fpiPickWp = game.fpiPick === game.home ? game.homeWinProbability : game.awayWinProbability;
+      const mlPickWp = game.mlPick === game.home ? (game.homeML_WP * 100) : (game.awayML_WP * 100);
+
+      if (game.fpiPick === game.mlPick) {
+        modelDisagreement = Math.abs(fpiPickWp - mlPickWp);
+      } else {
+        modelDisagreement = (fpiPickWp + mlPickWp-100);
+      }
+    }
+
+    let confidenceDisagreement = null;
+    if (isFinite(game.fpiConfidence) && isFinite(game.mlConfidence)) {
+      if (game.fpiPick === game.mlPick) {
+        confidenceDisagreement = Math.abs(game.fpiConfidence - game.mlConfidence);
+      } else {
+        confidenceDisagreement = (game.fpiConfidence + game.mlConfidence);
+      }
+    }
+
+    return { ...game, modelDisagreement, confidenceDisagreement };
+  });
+
+  return processedGames;
+};
+
 const teamAbbreviations = {
   "Kansas City Chiefs": "KC",
   "Denver Broncos": "DEN",
@@ -772,108 +875,7 @@ function OddsTable({ weeks, selectedWeek, showDisagreement, setShowDisagreement 
   }
 
   const sortedGames = React.useMemo(() => {
-    let sortableGames = [...weekData.games];
-
-    // Pre-calculate derived values for sorting
-    sortableGames = sortableGames.map(game => {
-      const absDiff = (game.homeWinProbability && game.awayWinProbability)
-        ? Math.abs(game.homeWinProbability - game.awayWinProbability)
-        : -1;
-      
-      const rawAwayML_WP = convertOddsToProbability(game.awayMoneyLine);
-      const rawHomeML_WP = convertOddsToProbability(game.homeMoneyLine);
-
-      let awayML_WP = null;
-      let homeML_WP = null;
-
-      if (rawAwayML_WP !== null && rawHomeML_WP !== null) {
-        const totalProb = rawAwayML_WP + rawHomeML_WP;
-        if (totalProb > 0) {
-          awayML_WP = rawAwayML_WP / totalProb;
-          homeML_WP = rawHomeML_WP / totalProb;
-        } else {
-          awayML_WP = rawAwayML_WP;
-          homeML_WP = rawHomeML_WP;
-        }
-      }
-      
-      const absMlDiff = (awayML_WP && homeML_WP) ? Math.abs(awayML_WP - homeML_WP) : -1;
-      
-      const fpiPick = (game.homeWinProbability !== null && game.awayWinProbability !== null)
-        ? (game.homeWinProbability > game.awayWinProbability ? game.home : game.away)
-        : null;
-      const mlPick = (rawAwayML_WP !== null && rawHomeML_WP !== null)
-        ? (rawAwayML_WP < rawHomeML_WP ? game.home : game.away)
-        : null;
-
-      // Aggregate calculations
-      const aggAwayScore = (game.awayWinProbability || 0) + ((awayML_WP || 0) * 100);
-      const aggHomeScore = (game.homeWinProbability || 0) + ((homeML_WP || 0) * 100);
-      const totalScore = aggAwayScore + aggHomeScore;
-      
-      const aggAwayWP = totalScore > 0 ? (aggAwayScore / totalScore) * 100 : null;
-      const aggHomeWP = totalScore > 0 ? (aggHomeScore / totalScore) * 100 : null;
-      const aggAbsDiff = (aggAwayWP !== null && aggHomeWP !== null) ? Math.abs(aggAwayWP - aggHomeWP) : -1;
-      const aggPick = aggAwayWP > aggHomeWP ? game.away : game.home;
-
-
-      return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff, fpiPick, mlPick, aggAwayWP, aggHomeWP, aggAbsDiff, aggPick };
-    });
-
-    // Create ranks for fpiConfidence
-    const rankedByFpi = [...sortableGames].sort((a, b) => a.absDiff - b.absDiff);
-    const fpiRanks = {};
-    rankedByFpi.forEach((game, index) => {
-      fpiRanks[game.id] = game.absDiff === -1 ? Infinity : index + 1;
-    });
-
-    // Create ranks for mlConfidence
-    const rankedByMl = [...sortableGames].sort((a, b) => a.absMlDiff - b.absMlDiff);
-    const mlRanks = {};
-    rankedByMl.forEach((game, index) => {
-      mlRanks[game.id] = game.absMlDiff === -1 ? Infinity : index + 1;
-    });
-
-    // Create ranks for aggConfidence
-    const rankedByAgg = [...sortableGames].sort((a, b) => a.aggAbsDiff - b.aggAbsDiff);
-    const aggRanks = {};
-    rankedByAgg.forEach((game, index) => {
-      aggRanks[game.id] = game.aggAbsDiff === -1 ? Infinity : index + 1;
-    });
-
-    sortableGames = sortableGames.map(game => ({
-      ...game,
-      fpiConfidence: fpiRanks[game.id],
-      mlConfidence: mlRanks[game.id],
-      aggConfidence: aggRanks[game.id]
-    }));
-
-    // Calculate modelDisagreement
-    sortableGames = sortableGames.map(game => {
-      let modelDisagreement = null;
-      if (game.homeWinProbability !== null && game.homeML_WP !== null) {
-        const fpiPickWp = game.fpiPick === game.home ? game.homeWinProbability : game.awayWinProbability;
-        const mlPickWp = game.mlPick === game.home ? (game.homeML_WP * 100) : (game.awayML_WP * 100);
-
-        if (game.fpiPick === game.mlPick) {
-          modelDisagreement = Math.abs(fpiPickWp - mlPickWp);
-        } else {
-          modelDisagreement = (fpiPickWp + mlPickWp-100);
-        }
-      }
-
-      let confidenceDisagreement = null;
-      if (isFinite(game.fpiConfidence) && isFinite(game.mlConfidence)) {
-        if (game.fpiPick === game.mlPick) {
-          confidenceDisagreement = Math.abs(game.fpiConfidence - game.mlConfidence);
-        } else {
-          confidenceDisagreement = (game.fpiConfidence + game.mlConfidence);
-        }
-      }
-
-      return { ...game, modelDisagreement, confidenceDisagreement };
-    });
-
+    let sortableGames = calculateGameConfidence([...weekData.games]);
 
     if (sortConfig.key !== null) {
       sortableGames.sort((a, b) => {
@@ -1022,6 +1024,7 @@ function NFLScoresTracker() {
   const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
   const [showLogos, setShowLogos] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+const [showModelPicks, setShowModelPicks] = useState(false);
   const [activeChartTab, setActiveChartTab] = useState('cumulative-points');
   const [pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode] = useState('absolute');
   const [gotwDisplayMode, setGotwDisplayMode] = useState('absolute');
@@ -1260,24 +1263,24 @@ function NFLScoresTracker() {
     }
   }, [weeks, mockPicks]); // Re-run if weeks or mockPicks changes
 
-  const calculateConfidencePoints = () => {
+  const calculateConfidencePoints = (allPlayers) => {
     const results = {};
+    const playerNames = Object.keys(allPlayers);
 
-    Object.keys(mockPicks).forEach(player => {
-      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [], correctPicksPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0, gotwPoints: 0, pointsLost: 0 };
+    playerNames.forEach(player => {
+      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: allPlayers[player] || [], pointsPerWeek: [], correctPicksPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0, gotwPoints: 0, pointsLost: 0 };
     });
 
     weeks.forEach(weekData => {
-      let weeklyPoints = {};
-      let weeklyCorrectPicks = {};
-      Object.keys(mockPicks).forEach(player => {
-        weeklyPoints[player] = 0;
-        weeklyCorrectPicks[player] = 0;
+      // Pre-populate the pointsPerWeek array for the current week for all players
+      playerNames.forEach(player => {
+        results[player].pointsPerWeek.push({ week: weekData.week, points: 0 });
+        results[player].correctPicksPerWeek.push({ week: weekData.week, correctPicks: 0 });
       });
 
       weekData.games.forEach(game => {
-        Object.keys(mockPicks).forEach(player => {
-          const playerPicks = mockPicks[player];
+        playerNames.forEach(player => {
+          const playerPicks = allPlayers[player];
           const pick = playerPicks.find(p => p.gameId === game.id);
           if (!pick) return;
 
@@ -1321,93 +1324,92 @@ function NFLScoresTracker() {
             if (weekData.week === selectedWeek) {
               results[player].weekly += confidence;
             }
-            weeklyPoints[player] += confidence;
-            weeklyCorrectPicks[player]++;
-            results[player].correct++;
+
+            // Find the entry for the current week and update it directly
+            const weekEntry = results[player].pointsPerWeek.find(p => p.week === weekData.week);
+            if (weekEntry) {
+              weekEntry.points += confidence;
+            }
+            
+            const correctPicksEntry = results[player].correctPicksPerWeek.find(p => p.week === weekData.week);
+            if (correctPicksEntry) {
+                correctPicksEntry.correctPicks++;
+            }
+
             if (gamesOfTheWeek.includes(game.id)) {
               results[player].gotwPoints += confidence;
             }
           }
-          
-          if (weekData.week === selectedWeek) {
-              results[player].details.push({
-                gameId: game.id,
-                pick: pick.pick,
-                confidence: confidence,
-                winner: winner,
-                correct: (isComplete || (includeLiveGames && isLiveGame)) ? isCorrect : null,
-                homeTeam: game.home,
-                awayTeam: game.away,
-                score: (isComplete || (includeLiveGames && isLiveGame)) ? `${game.awayScore}-${game.homeScore}${isLiveGame ? ' (Live)' : ''}` : 'Pending',
-                isLive: isLiveGame
-              });
-          }
         });
-      });
-
-      Object.keys(mockPicks).forEach(player => {
-        const previousCumulativePoints = results[player].pointsPerWeek.length > 0
-          ? results[player].pointsPerWeek[results[player].pointsPerWeek.length - 1].cumulativePoints
-          : 0;
-        const currentCumulativePoints = previousCumulativePoints + weeklyPoints[player];
-        results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player], cumulativePoints: currentCumulativePoints });
-        results[player].correctPicksPerWeek.push({ week: weekData.week, correctPicks: weeklyCorrectPicks[player] });
-      });
-
-      // Calculate points relative to leader for the current week
-      let leaderPoints = 0;
-      Object.keys(mockPicks).forEach(player => {
-        const weekInfo = results[player].pointsPerWeek.find(p => p.week === weekData.week);
-        if (weekInfo && weekInfo.cumulativePoints > leaderPoints) {
-          leaderPoints = weekInfo.cumulativePoints;
-        }
-      });
-
-      Object.keys(mockPicks).forEach(player => {
-        const weekInfo = results[player].pointsPerWeek.find(p => p.week === weekData.week);
-        if (weekInfo) {
-          weekInfo.relativePoints = weekInfo.cumulativePoints - leaderPoints;
-        }
       });
     });
 
-    // Calculate remainingPossible based on the new logic
-    if (selectedWeek) {
-      const selectedWeekData = weeks.find(w => w.week === selectedWeek);
-      if (selectedWeekData) {
-        const numberOfGamesInWeek = selectedWeekData.games.length;
-        const maxPossiblePointsForWeek = (numberOfGamesInWeek / 2) * (1 + numberOfGamesInWeek) + 5; // Global for the week
+    Object.keys(allPlayers).forEach(player => {
+      let cumulativePoints = 0;
+      const sortedWeeks = [...results[player].pointsPerWeek].sort((a, b) => a.week - b.week);
+      results[player].pointsPerWeek = sortedWeeks.map(weekInfo => {
+        cumulativePoints += weekInfo.points;
+        return { ...weekInfo, cumulativePoints };
+      });
 
-        Object.keys(mockPicks).forEach(player => {
-          let totalConfidenceFromPlayedGamesForSelectedWeek = 0;
-          selectedWeekData.games.forEach(game => {
-            const playerPicks = mockPicks[player];
-            const pick = playerPicks.find(p => p.gameId === game.id);
-            if (pick) {
-              const isComplete = game.status === 'final' || game.status === 'post';
-              const isLiveGame = game.status === 'in' || game.status === 'live';
-              if (isComplete || (includeLiveGames && isLiveGame)) {
-                let confidence = Number(pick.confidence) || 0;
-                if (gamesOfTheWeek.includes(game.id)) {
-                  confidence += 5;
-                }
-                totalConfidenceFromPlayedGamesForSelectedWeek += confidence;
-              }
-            }
-          });
-          results[player].remainingPossible = maxPossiblePointsForWeek - totalConfidenceFromPlayedGamesForSelectedWeek;
-        });
-      }
-    }
+      const leaderPointsPerWeek = {};
+      weeks.forEach(weekData => {
+        const leaderPoints = Math.max(...Object.values(results).map(res => res.pointsPerWeek.find(p => p.week === weekData.week)?.cumulativePoints || 0));
+        leaderPointsPerWeek[weekData.week] = leaderPoints;
+      });
 
-    Object.keys(results).forEach(player => {
-      const lost = results[player].details.reduce((acc, detail) => {
-        if (detail.correct === false) {
-          return acc + detail.confidence;
+      results[player].pointsPerWeek.forEach(weekInfo => {
+        const leaderPoints = leaderPointsPerWeek[weekInfo.week];
+        weekInfo.relativePoints = weekInfo.cumulativePoints - leaderPoints;
+      });
+
+      let totalPossible = 0;
+      results[player].pointsPerWeek.forEach(weekInfo => {
+        const weekGames = weeks.find(w => w.week === weekInfo.week)?.games;
+        if (weekGames) {
+          const numGames = weekGames.length;
+          const gotwBonus = weekGames.some(g => gamesOfTheWeek.includes(g.id)) ? 5 : 0;
+          totalPossible += (numGames * (numGames + 1) / 2) + gotwBonus;
         }
-        return acc;
-      }, 0);
-      results[player].pointsLost = lost;
+      });
+      results[player].possible = totalPossible;
+
+      const currentWeekData = weeks.find(w => w.week === selectedWeek);
+      if (currentWeekData) {
+        const playedGameIds = currentWeekData.games
+          .filter(g => g.status === 'in' || g.status === 'final' || g.status === 'post')
+          .map(g => g.id);
+
+        const confidenceFromPlayedGames = allPlayers[player]
+          .filter(p => playedGameIds.includes(p.gameId))
+          .reduce((acc, p) => acc + p.confidence, 0);
+        
+        const gotwPlayedBonus = currentWeekData.games
+          .filter(g => playedGameIds.includes(g.id) && gamesOfTheWeek.includes(g.id))
+          .length > 0 ? 5 : 0;
+
+        results[player].totalConfidenceFromPlayedGames = confidenceFromPlayedGames + gotwPlayedBonus;
+        
+        const numGamesInWeek = currentWeekData.games.length;
+        const maxPossiblePointsInWeek = (numGamesInWeek * (numGamesInWeek + 1) / 2) + (currentWeekData.games.some(g => gamesOfTheWeek.includes(g.id)) ? 5 : 0);
+        
+        results[player].remainingPossible = maxPossiblePointsInWeek - results[player].totalConfidenceFromPlayedGames;
+
+        const pointsLostInWeek = allPlayers[player]
+          .filter(p => {
+            const game = currentWeekData.games.find(g => g.id === p.gameId);
+            return game && (game.status === 'final' || game.status === 'post') && game.winner !== (teamAbbreviations[p.pick] || p.pick);
+          })
+          .reduce((acc, p) => {
+            const game = currentWeekData.games.find(g => g.id === p.gameId);
+            let confidence = p.confidence;
+            if (game && gamesOfTheWeek.includes(game.id)) {
+              confidence += 5;
+            }
+            return acc + confidence;
+          }, 0);
+        results[player].pointsLost = pointsLostInWeek;
+      }
     });
 
     return results;
@@ -1468,7 +1470,44 @@ function NFLScoresTracker() {
     return acc;
   }, {}) : {};
 
-  const confidenceResults = calculateConfidencePoints();
+  const modelPlayersData = React.useMemo(() => {
+    if (!showModelPicks || weeks.length === 0) {
+      return [];
+    }
+
+    const fpiPlayerPicks = [];
+    const mlPlayerPicks = [];
+
+    weeks.forEach(weekData => {
+      const gamesWithConfidence = calculateGameConfidence(weekData.games);
+      gamesWithConfidence.forEach(game => {
+        if (game.fpiPick && isFinite(game.fpiConfidence)) {
+          fpiPlayerPicks.push({
+            gameId: game.id,
+            pick: game.fpiPick,
+            confidence: game.fpiConfidence
+          });
+        }
+        if (game.mlPick && isFinite(game.mlConfidence)) {
+          mlPlayerPicks.push({
+            gameId: game.id,
+            pick: game.mlPick,
+            confidence: game.mlConfidence
+          });
+        }
+      });
+    });
+
+    return [
+      { name: 'FPI', picks: fpiPlayerPicks },
+      { name: 'ML', picks: mlPlayerPicks }
+    ];
+  }, [showModelPicks, weeks]);
+
+  const confidenceResults = React.useMemo(() => {
+    const allPlayers = { ...mockPicks, ...modelPlayersData.reduce((acc, player) => ({ ...acc, [player.name]: player.picks }), {}) };
+    return calculateConfidencePoints(allPlayers);
+  }, [mockPicks, modelPlayersData]);
   const leaderboard = Object.entries(confidenceResults)
     .sort((a, b) => b[1].total - a[1].total);
 
@@ -1492,13 +1531,15 @@ function NFLScoresTracker() {
               )
             ),
             React.createElement("div", { className: "flex gap-2" },
-              React.createElement("button", { 
-                onClick: () => refreshWeek(selectedWeek), 
-                className: `px-3 py-1 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`,
-                disabled: isRefreshing
-              },
-                isRefreshing ? "Refreshing..." : "Refresh Scores"
-              ),
+            React.createElement("button", {
+              onClick: () => refreshWeek(selectedWeek),
+              className: `px-3 py-1 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`,
+              disabled: isRefreshing
+            }, isRefreshing ? "Refreshing..." : "Refresh"),
+            React.createElement("button", {
+              onClick: () => setShowModelPicks(!showModelPicks),
+              className: `ml-2 px-3 py-1 text-sm rounded-lg transition-colors ${showModelPicks ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'} text-white`
+            }, "Incl. Models"),
               React.createElement("button", {
                 onClick: () => setIncludeLiveGames(!includeLiveGames),
                 className: `px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${

@@ -11,6 +11,13 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 
 ## Recent Updates & Features
 
+*   **Sticky Headers & Enhanced Disagreement Metrics (2025-11-15):**
+    *   **Sticky Table Headers (Attempted):** An attempt was made to implement sticky (frozen) headers for all major tables. However, the `position: sticky` CSS approach was not successful, and this feature remains an unsolved issue.
+    *   **Enhanced Disagreement Calculation:** The disagreement metrics in the "Win Probs." tab have been updated to be more informative:
+        *   When FPI and Moneyline models pick the **same team**, the metric shows the absolute difference between their confidence values (a positive number).
+        *   When they pick **different teams**, the metric now shows a **negative number** representing the sum of their confidences, clearly flagging a conflict in their predictions.
+    *   **UI Margin Adjustments:** Further refined the vertical spacing in the header to minimize the gap between the main title and the control buttons.
+
 *   **Disagreement Measures & UI Tweaks (2025-11-15):**
     *   **Disagreement Measures:**
         *   Added a new disagreement measure based on the absolute difference between FPI and Moneyline confidence ranks.
@@ -105,3 +112,4 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 *   Consider better visualization of Game of the week (e.g., color instead of badge).
 *   Find alternative for tooltips on mobiles.
 *   Work on odds tab to be usable for picking games (e.g. picks by source + average).
+*   Fix: Points percentage in GotW does not always work (seems to be related to situations when the previous week's "Game of the Week" result is not yet known).
