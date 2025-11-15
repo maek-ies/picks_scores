@@ -11,6 +11,17 @@ A simple web app to compute and display scores for an NFL pick'em confidence gam
 
 ## Recent Updates & Features
 
+*   **Disagreement Measures & UI Tweaks (2025-11-15):**
+    *   **Disagreement Measures:**
+        *   Added a new disagreement measure based on the absolute difference between FPI and Moneyline confidence ranks.
+        *   The "Show Disagreement" button in the "Win Probs." tab now cycles through three modes:
+            1.  `Hidden`: No disagreement metric is shown.
+            2.  `WP`: Shows the disagreement based on Win Probability (`(WP: X.X%)`).
+            3.  `Confidence`: Shows the disagreement based on confidence rank (`(Conf: X)`).
+        *   This metric is displayed in the "Agg Pick" column of the top summary table.
+    *   **UI/UX Refinements:**
+        *   Adjusted vertical spacing (margins) between the different rows of buttons in the header for better visual separation.
+
 *   **Chart UI Enhancements (2025-11-15):**
     *   Renamed the "Odds" tab to "Win Probs.".
     *   Removed titles from all charts in the "Charts" tab for a cleaner look.
