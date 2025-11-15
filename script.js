@@ -646,7 +646,7 @@ function GamesOfTheWeekPointsTable({ mockPicks, weeks, gamesOfTheWeek, includeLi
     );
 }
 
-function ConfidencePicksSummaryTable({ games }) {
+function ConfidencePicksSummaryTable({ games, showDisagreement }) {
   const [sortConfig, setSortConfig] = useState({ key: 'aggConfidence', direction: 'ascending' });
 
   const requestSort = (key) => {
@@ -691,7 +691,7 @@ function ConfidencePicksSummaryTable({ games }) {
 
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mb-6" },
-      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, "Confidence Picks Summary"),
+
       React.createElement("div", { className: "overflow-x-auto" },
         React.createElement("table", { className: "w-full" },
           React.createElement("thead", null,
@@ -718,7 +718,8 @@ function ConfidencePicksSummaryTable({ games }) {
                           alt: game.aggPick,
                           className: "w-8 h-8 mx-auto"
                         }),
-                        React.createElement("span", { className: "text-xs text-slate-400 mt-1" }, aggPickWP ? `${aggPickWP.toFixed(1)}%` : "N/A")
+                        React.createElement("div", { className: "text-xs text-slate-400 mt-1" }, aggPickWP ? `${aggPickWP.toFixed(1)}%` : "N/A"),
+                        showDisagreement && game.modelDisagreement !== null && React.createElement("div", { className: "text-xs text-slate-400 mt-1" }, `-(dis: ${game.modelDisagreement.toFixed(1)}%)`)
                       )
                     )
                   ),
@@ -758,7 +759,7 @@ function ConfidencePicksSummaryTable({ games }) {
   );
 }
 
-function OddsTable({ weeks, selectedWeek }) {
+function OddsTable({ weeks, selectedWeek, showDisagreement, setShowDisagreement }) {
   const [sortConfig, setSortConfig] = useState({ key: 'fpiConfidence', direction: 'ascending' });
 
   if (!selectedWeek) return null;
@@ -797,8 +798,12 @@ function OddsTable({ weeks, selectedWeek }) {
       
       const absMlDiff = (awayML_WP && homeML_WP) ? Math.abs(awayML_WP - homeML_WP) : -1;
       
-      const fpiPick = game.homeWinProbability > game.awayWinProbability ? game.home : game.away;
-      const mlPick = rawAwayML_WP < rawHomeML_WP ? game.home : game.away;
+      const fpiPick = (game.homeWinProbability !== null && game.awayWinProbability !== null)
+        ? (game.homeWinProbability > game.awayWinProbability ? game.home : game.away)
+        : null;
+      const mlPick = (rawAwayML_WP !== null && rawHomeML_WP !== null)
+        ? (rawAwayML_WP < rawHomeML_WP ? game.home : game.away)
+        : null;
 
       // Aggregate calculations
       const aggAwayScore = (game.awayWinProbability || 0) + ((awayML_WP || 0) * 100);
@@ -842,6 +847,15 @@ function OddsTable({ weeks, selectedWeek }) {
       aggConfidence: aggRanks[game.id]
     }));
 
+    // Calculate modelDisagreement
+    sortableGames = sortableGames.map(game => {
+      let modelDisagreement = null;
+      if (game.homeWinProbability !== null && game.homeML_WP !== null) {
+        modelDisagreement = Math.abs(game.homeWinProbability - (game.homeML_WP * 100));
+      }
+      return { ...game, modelDisagreement };
+    });
+
 
     if (sortConfig.key !== null) {
       sortableGames.sort((a, b) => {
@@ -882,7 +896,19 @@ function OddsTable({ weeks, selectedWeek }) {
 
   return (
     React.createElement(React.Fragment, null,
-      React.createElement(ConfidencePicksSummaryTable, { games: sortedGames }),
+      React.createElement(ConfidencePicksSummaryTable, { games: sortedGames, showDisagreement: showDisagreement }),
+      React.createElement("div", { className: "flex justify-end mb-2" },
+        React.createElement("button", {
+          onClick: () => setShowDisagreement(!showDisagreement),
+          className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
+            showDisagreement
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
+          }`
+        },
+          showDisagreement ? 'Hide Disagreement' : 'Show Disagreement'
+        )
+      ),
       React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
         React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Full Data for Week ${selectedWeek}`),
         React.createElement("div", { className: "overflow-x-auto" },
@@ -977,6 +1003,7 @@ function NFLScoresTracker() {
   const [activeChartTab, setActiveChartTab] = useState('cumulative-points');
   const [pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode] = useState('absolute');
   const [gotwDisplayMode, setGotwDisplayMode] = useState('absolute');
+  const [showDisagreement, setShowDisagreement] = useState(false);
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -1435,7 +1462,7 @@ function NFLScoresTracker() {
   return (
     React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" },
       React.createElement("div", { className: "bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10" },
-        React.createElement("div", { className: "max-w-7xl mx-auto px-4 py-4" },
+        React.createElement("div", { className: "max-w-7xl mx-auto px-4 py-0" },
           React.createElement("div", { className: "flex items-center justify-between flex-wrap gap-4" },
             React.createElement("div", { className: "flex items-center gap-3" },
               React.createElement("span", null, "\uD83C\uDFC8"),
@@ -1467,7 +1494,7 @@ function NFLScoresTracker() {
               )
             )
           ),
-          React.createElement("div", { className: "flex gap-2 mt-4" },
+          React.createElement("div", { className: "flex gap-2 mt-1" },
             React.createElement("button", {
               onClick: () => setActiveTab('week-overview'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -1527,7 +1554,7 @@ function NFLScoresTracker() {
           )
         ) : activeTab === 'chart' ? (
           React.createElement("div", null,
-            React.createElement("div", { className: "flex gap-2 mb-4" },
+            React.createElement("div", { className: "flex gap-2 mb-1" },
               React.createElement("button", {
                 onClick: () => setActiveChartTab('cumulative-points'),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -1588,7 +1615,7 @@ function NFLScoresTracker() {
             )
           )
         ) : activeTab === 'odds' ? (
-          React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek })
+          React.createElement(OddsTable, { weeks: weeks, selectedWeek: selectedWeek, showDisagreement: showDisagreement, setShowDisagreement: setShowDisagreement })
         ) : activeTab === 'week-overview' ? (
           React.createElement("div", null,
             React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
@@ -1746,10 +1773,7 @@ function NFLScoresTracker() {
         ) : activeTab === 'leaderboard' ? (
           React.createElement("div", { className: "space-y-6" },
             React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
-              React.createElement("h2", { className: "text-xl font-bold text-white mb-4 flex items-center gap-2" },
-                React.createElement("span", null, "\uD83C\uDFC6"),
-                "Leaderboard"
-              ),
+
               React.createElement("div", { className: "space-y-2" },
                 leaderboard.map(([player, data], idx) => {
                   const firstPlacePoints = leaderboard.length > 0 ? leaderboard[0][1].total : 0;
