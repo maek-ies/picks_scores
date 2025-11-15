@@ -47,7 +47,7 @@ const teamAbbreviations = {
   "Pittsburgh Steelers": "PIT",
 };
 
-function WeeklyPointsChart({ confidenceResults, selectedWeek, weeks: allWeeks, gamesOfTheWeek, pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode }) {
+function WeeklyPointsChart({ confidenceResults, selectedWeek, weeks: allWeeks, gamesOfTheWeek, pointsPerWeekDisplayMode }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
 
@@ -146,16 +146,7 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek, weeks: allWeeks, g
   };
 
   return (
-    React.createElement("div", { className: "relative bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
-      React.createElement("button", {
-        onClick: () => {
-          const modes = ['absolute', 'points_percentage', 'correct_percentage'];
-          const nextIndex = (modes.indexOf(pointsPerWeekDisplayMode) + 1) % modes.length;
-          setPointsPerWeekDisplayMode(modes[nextIndex]);
-        },
-        className: "absolute top-4 right-4 px-3 py-1 text-xs rounded-md font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-      }, `View: ${pointsPerWeekDisplayMode.replace('_', ' ')}`),
-      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Points per Week"),
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
       React.createElement("svg", {
         viewBox: `0 0 ${chartWidth} ${chartHeight}`,
         className: "w-full h-auto",
@@ -380,7 +371,6 @@ function CumulativePointsChart({ confidenceResults, selectedWeek }) {
 
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
-      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points vs. Leader"),
       React.createElement("svg", {
         viewBox: `0 0 ${chartWidth} ${chartHeight}`,
         className: "w-full h-auto",
@@ -494,7 +484,7 @@ function CumulativePointsTable({ confidenceResults }) {
     );
 }
 
-function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesOfTheWeek, includeLiveGames, gotwDisplayMode, setGotwDisplayMode }) {
+function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesOfTheWeek, includeLiveGames, gotwDisplayMode }) {
     const players = Object.keys(confidenceResults);
 
     const chartData = React.useMemo(() => {
@@ -536,7 +526,7 @@ function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesO
     const maxPoints = gotwDisplayMode === 'absolute' ? Math.max(1, ...chartData.map(d => d.value)) : 100;
 
     const chartWidth = 800;
-    const chartHeight = 250;
+    const chartHeight = 400;
     const padding = 50;
 
     const xScale = (index) => padding + index * (chartWidth - 2 * padding) / (chartData.length - 1);
@@ -545,16 +535,7 @@ function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesO
     const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
 
     return (
-        React.createElement("div", { className: "relative bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
-            React.createElement("button", {
-                onClick: () => {
-                  const modes = ['absolute', 'points_percentage', 'correct_percentage'];
-                  const nextIndex = (modes.indexOf(gotwDisplayMode) + 1) % modes.length;
-                  setGotwDisplayMode(modes[nextIndex]);
-                },
-                className: "absolute top-4 right-4 px-3 py-1 text-xs rounded-md font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-            }, `View: ${gotwDisplayMode.replace('_', ' ')}`),
-            React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "GotW Points"),
+        React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
             React.createElement("svg", {
                 viewBox: `0 0 ${chartWidth} ${chartHeight}`,
                 className: "w-full h-auto"
@@ -1390,23 +1371,42 @@ function NFLScoresTracker() {
                 }`
               }, "GotW Points")
             ),
-            activeChartTab === 'points-per-week' && React.createElement("div", null,
-              React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode: setPointsPerWeekDisplayMode }),
+            activeChartTab === 'points-per-week' && React.createElement("div", { className: "relative" },
+              React.createElement("div", { className: "absolute top-4 right-4 z-10" },
+                React.createElement("button", {
+                  onClick: () => {
+                    const modes = ['absolute', 'points_percentage', 'correct_percentage'];
+                    const nextIndex = (modes.indexOf(pointsPerWeekDisplayMode) + 1) % modes.length;
+                    setPointsPerWeekDisplayMode(modes[nextIndex]);
+                  },
+                  className: "px-4 py-2 rounded-lg font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                }, `View: ${pointsPerWeekDisplayMode.replace('_', ' ')}`)
+              ),
+              React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode }),
               React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode })
             ),
             activeChartTab === 'cumulative-points' && React.createElement("div", null,
               React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
               React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
             ),
-            activeChartTab === 'gotw-points' && React.createElement("div", null,
+            activeChartTab === 'gotw-points' && React.createElement("div", { className: "relative" },
+              React.createElement("div", { className: "absolute top-4 right-4 z-10" },
+                React.createElement("button", {
+                  onClick: () => {
+                    const modes = ['absolute', 'points_percentage', 'correct_percentage'];
+                    const nextIndex = (modes.indexOf(gotwDisplayMode) + 1) % modes.length;
+                    setGotwDisplayMode(modes[nextIndex]);
+                  },
+                  className: "px-4 py-2 rounded-lg font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                }, `View: ${gotwDisplayMode.replace('_', ' ')}`)
+              ),
               React.createElement(GamesOfTheWeekPointsChart, { 
                 confidenceResults: confidenceResults,
                 mockPicks: mockPicks,
                 weeks: weeks,
                 gamesOfTheWeek: gamesOfTheWeek,
                 includeLiveGames: includeLiveGames,
-                gotwDisplayMode: gotwDisplayMode,
-                setGotwDisplayMode: setGotwDisplayMode
+                gotwDisplayMode: gotwDisplayMode 
               }),
               React.createElement(GamesOfTheWeekPointsTable, { mockPicks: mockPicks, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, includeLiveGames: includeLiveGames })
             )
