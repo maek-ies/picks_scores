@@ -1484,14 +1484,14 @@ function NFLScoresTracker() {
             React.createElement("div", { className: "flex gap-2" },
               React.createElement("button", { 
                 onClick: () => refreshWeek(selectedWeek), 
-                className: `px-3 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`,
+                className: `px-3 py-1 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`,
                 disabled: isRefreshing
               },
                 isRefreshing ? "Refreshing..." : "Refresh Scores"
               ),
               React.createElement("button", {
                 onClick: () => setIncludeLiveGames(!includeLiveGames),
-                className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
+                className: `px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
                   includeLiveGames
                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
@@ -1505,7 +1505,7 @@ function NFLScoresTracker() {
               )
             )
           ),
-          React.createElement("div", { className: "flex gap-2 mt-0" },
+          React.createElement("div", { className: "flex gap-2 mt-2" },
             React.createElement("button", {
               onClick: () => setActiveTab('week-overview'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -1565,7 +1565,7 @@ function NFLScoresTracker() {
           )
         ) : activeTab === 'chart' ? (
           React.createElement("div", null,
-            React.createElement("div", { className: "flex gap-2 mb-1" },
+            React.createElement("div", { className: "flex gap-2 mt-1" },
               React.createElement("button", {
                 onClick: () => setActiveChartTab('cumulative-points'),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -1594,7 +1594,7 @@ function NFLScoresTracker() {
                     setPointsPerWeekDisplayMode(modes[nextIndex]);
                   },
                   className: "px-4 py-2 rounded-lg font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-                }, `View: ${pointsPerWeekDisplayMode.replace('_', ' ')}`)
+                }, `${pointsPerWeekDisplayMode.replace('_', ' ')}`)
               ),
               React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode }),
               React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode })
@@ -1612,7 +1612,7 @@ function NFLScoresTracker() {
                     setGotwDisplayMode(modes[nextIndex]);
                   },
                   className: "px-4 py-2 rounded-lg font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-                }, `View: ${gotwDisplayMode.replace('_', ' ')}`)
+                }, `${gotwDisplayMode.replace('_', ' ')}`)
               ),
               React.createElement(GamesOfTheWeekPointsChart, { 
                 confidenceResults: confidenceResults,
