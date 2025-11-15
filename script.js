@@ -47,22 +47,59 @@ const teamAbbreviations = {
   "Pittsburgh Steelers": "PIT",
 };
 
-function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
+function WeeklyPointsChart({ confidenceResults, selectedWeek, weeks: allWeeks, gamesOfTheWeek, pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode }) {
   const [activePoint, setActivePoint] = useState(null);
   const players = Object.keys(confidenceResults);
 
-  const filteredConfidenceResults = {};
-  players.forEach(player => {
-    if (confidenceResults[player]) {
-      filteredConfidenceResults[player] = {
-        ...confidenceResults[player],
-        pointsPerWeek: confidenceResults[player].pointsPerWeek.filter(p => p.week <= selectedWeek)
-      };
-    }
-  });
+  const maxPointsPerWeek = React.useMemo(() => {
+    const result = {};
+    if (!allWeeks) return result;
+    allWeeks.forEach(weekData => {
+        const numGames = weekData.games.length;
+        const gotwBonus = weekData.games.some(g => gamesOfTheWeek.includes(g.id)) ? 5 : 0;
+        result[weekData.week] = (numGames * (numGames + 1) / 2) + gotwBonus;
+    });
+    return result;
+  }, [allWeeks, gamesOfTheWeek]);
 
-  const weeks = filteredConfidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
-  const maxPoints = Math.max(1, ...Object.values(filteredConfidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points)));
+  const processedConfidenceResults = React.useMemo(() => {
+    const processed = {};
+    players.forEach(player => {
+      if (confidenceResults[player]) {
+        let processedPoints;
+        const filteredPoints = confidenceResults[player].pointsPerWeek.filter(p => p.week <= selectedWeek);
+
+        switch (pointsPerWeekDisplayMode) {
+          case 'points_percentage':
+            processedPoints = filteredPoints.map(p => ({
+              ...p,
+              points: maxPointsPerWeek[p.week] ? (p.points / maxPointsPerWeek[p.week]) * 100 : 0
+            }));
+            break;
+          case 'correct_percentage':
+            const correctPicksData = confidenceResults[player].correctPicksPerWeek.filter(p => p.week <= selectedWeek);
+            processedPoints = correctPicksData.map(p => {
+                const weekInfo = allWeeks.find(w => w.week === p.week);
+                const numGames = weekInfo ? weekInfo.games.length : 0;
+                return {
+                    ...p,
+                    points: numGames > 0 ? (p.correctPicks / numGames) * 100 : 0
+                }
+            });
+            break;
+          case 'absolute':
+          default:
+            processedPoints = filteredPoints;
+            break;
+        }
+        processed[player] = { ...confidenceResults[player], pointsPerWeek: processedPoints };
+      }
+    });
+    return processed;
+  }, [confidenceResults, selectedWeek, pointsPerWeekDisplayMode, maxPointsPerWeek, players, allWeeks]);
+
+  const weeks = processedConfidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+  const maxPoints = pointsPerWeekDisplayMode === 'absolute' ? Math.max(1, ...Object.values(processedConfidenceResults).flatMap(p => p.pointsPerWeek.map(w => w.points))) : 100;
 
   const chartWidth = 800;
   const chartHeight = 400;
@@ -78,15 +115,20 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
     const x = e.clientX - svgRect.left;
     const y = e.clientY - svgRect.top;
 
+    const scaleX = chartWidth / svgRect.width;
+    const scaleY = chartHeight / svgRect.height;
+    const transformedX = x * scaleX;
+    const transformedY = y * scaleY;
+
     let closestPoint = null;
     let minDistance = Infinity;
 
     players.forEach((player, playerIndex) => {
-      if (filteredConfidenceResults[player]) {
-        filteredConfidenceResults[player].pointsPerWeek.forEach(d => {
+      if (processedConfidenceResults[player]) {
+        processedConfidenceResults[player].pointsPerWeek.forEach(d => {
           const pointX = xScale(d.week);
           const pointY = yScale(d.points);
-          const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+          const distance = Math.sqrt(Math.pow(transformedX - pointX, 2) + Math.pow(transformedY - pointY, 2));
 
           if (distance < minDistance && distance < 20) {
             minDistance = distance;
@@ -104,9 +146,22 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
   };
 
   return (
-    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
+    React.createElement("div", { className: "relative bg-slate-800/50 rounded-lg border border-slate-700 p-6" },
+      React.createElement("button", {
+        onClick: () => {
+          const modes = ['absolute', 'points_percentage', 'correct_percentage'];
+          const nextIndex = (modes.indexOf(pointsPerWeekDisplayMode) + 1) % modes.length;
+          setPointsPerWeekDisplayMode(modes[nextIndex]);
+        },
+        className: "absolute top-4 right-4 px-3 py-1 text-xs rounded-md font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+      }, `View: ${pointsPerWeekDisplayMode.replace('_', ' ')}`),
       React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Points per Week"),
-      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
+      React.createElement("svg", {
+        viewBox: `0 0 ${chartWidth} ${chartHeight}`,
+        className: "w-full h-auto",
+        onMouseMove: handleMouseMove,
+        onMouseLeave: handleMouseLeave
+      },
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
         weeks.map(week => (
@@ -117,17 +172,17 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
         React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
         Array.from({ length: 5 }).map((_, i) => {
           const points = Math.round(maxPoints / 4 * i);
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
+          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, `${points}${pointsPerWeekDisplayMode !== 'absolute' ? '%' : ''}`);
         }),
 
         // Lines
         players.map((player, playerIndex) => (
-          filteredConfidenceResults[player] && React.createElement("polyline", {
+          processedConfidenceResults[player] && React.createElement("polyline", {
             key: player,
             fill: "none",
             stroke: colors[playerIndex % colors.length],
             strokeWidth: 2,
-            points: filteredConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
+            points: processedConfidenceResults[player].pointsPerWeek.map(d => `${xScale(d.week)},${yScale(d.points)}`).join(' ')
           })
         )),
 
@@ -136,7 +191,7 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
           React.createElement("circle", { cx: activePoint.x, cy: activePoint.y, r: 5, fill: activePoint.color }),
           React.createElement("rect", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 130 : activePoint.x + 10, y: activePoint.y - 20, width: 120, height: 40, fill: "#1e293b", stroke: activePoint.color, rx: 5 }),
           React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y - 5, fill: "#fff" }, `${activePoint.player}`),
-          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points} pts`)
+          React.createElement("text", { x: activePoint.x > chartWidth - 150 ? activePoint.x - 120 : activePoint.x + 20, y: activePoint.y + 10, fill: "#94a3b8" }, `W${activePoint.week}: ${activePoint.points.toFixed(pointsPerWeekDisplayMode !== 'absolute' ? 1 : 0)}${pointsPerWeekDisplayMode !== 'absolute' ? '%' : ' pts'}`)
         ),
 
         // Legend
@@ -151,28 +206,61 @@ function WeeklyPointsChart({ confidenceResults, selectedWeek }) {
   );
 }
 
-function WeeklyPointsTable({ confidenceResults }) {
+function WeeklyPointsTable({ confidenceResults, weeks: allWeeks, gamesOfTheWeek, pointsPerWeekDisplayMode }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
     const players = Object.keys(confidenceResults);
     const weeks = confidenceResults[players[0]]?.pointsPerWeek.map(p => p.week) || [];
+
+    const maxPointsPerWeek = React.useMemo(() => {
+        const result = {};
+        if (!allWeeks) return result;
+        allWeeks.forEach(weekData => {
+            const numGames = weekData.games.length;
+            const gotwBonus = weekData.games.some(g => gamesOfTheWeek.includes(g.id)) ? 5 : 0;
+            result[weekData.week] = (numGames * (numGames + 1) / 2) + gotwBonus;
+        });
+        return result;
+    }, [allWeeks, gamesOfTheWeek]);
 
     const sortedWeeks = React.useMemo(() => {
         let sortableWeeks = [...weeks];
         if (sortConfig.key !== null) {
             sortableWeeks.sort((a, b) => {
-                const aPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === a)?.points || 0;
-                const bPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === b)?.points || 0;
-                if (aPoints < bPoints) {
+                let aValue, bValue;
+                
+                switch (pointsPerWeekDisplayMode) {
+                    case 'points_percentage':
+                        const aPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === a)?.points || 0;
+                        const bPoints = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === b)?.points || 0;
+                        aValue = maxPointsPerWeek[a] ? (aPoints / maxPointsPerWeek[a]) * 100 : 0;
+                        bValue = maxPointsPerWeek[b] ? (bPoints / maxPointsPerWeek[b]) * 100 : 0;
+                        break;
+                    case 'correct_percentage':
+                        const aCorrect = confidenceResults[sortConfig.key].correctPicksPerWeek.find(d => d.week === a)?.correctPicks || 0;
+                        const bCorrect = confidenceResults[sortConfig.key].correctPicksPerWeek.find(d => d.week === b)?.correctPicks || 0;
+                        const aNumGames = allWeeks.find(w => w.week === a)?.games.length || 0;
+                        const bNumGames = allWeeks.find(w => w.week === b)?.games.length || 0;
+                        aValue = aNumGames > 0 ? (aCorrect / aNumGames) * 100 : 0;
+                        bValue = bNumGames > 0 ? (bCorrect / bNumGames) * 100 : 0;
+                        break;
+                    case 'absolute':
+                    default:
+                        aValue = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === a)?.points || 0;
+                        bValue = confidenceResults[sortConfig.key].pointsPerWeek.find(d => d.week === b)?.points || 0;
+                        break;
+                }
+
+                if (aValue < bValue) {
                     return sortConfig.direction === 'ascending' ? -1 : 1;
                 }
-                if (aPoints > bPoints) {
+                if (aValue > bValue) {
                     return sortConfig.direction === 'ascending' ? 1 : -1;
                 }
                 return 0;
             });
         }
         return sortableWeeks;
-    }, [weeks, sortConfig, confidenceResults]);
+    }, [weeks, sortConfig, confidenceResults, pointsPerWeekDisplayMode, maxPointsPerWeek, allWeeks]);
 
     const requestSort = (key) => {
         let direction = 'ascending';
@@ -200,11 +288,27 @@ function WeeklyPointsTable({ confidenceResults }) {
                     sortedWeeks.map(week => (
                         React.createElement("tr", { key: week, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
                             React.createElement("td", { className: "px-4 py-3 text-white font-semibold" }, `Week ${week}`),
-                            players.map(player => (
-                                React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, 
-                                    confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0
-                                )
-                            ))
+                            players.map(player => {
+                                let displayValue;
+                                switch (pointsPerWeekDisplayMode) {
+                                    case 'points_percentage':
+                                        const points = confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0;
+                                        const percentage = maxPointsPerWeek[week] ? (points / maxPointsPerWeek[week]) * 100 : 0;
+                                        displayValue = `${percentage.toFixed(1)}%`;
+                                        break;
+                                    case 'correct_percentage':
+                                        const correctPicks = confidenceResults[player].correctPicksPerWeek.find(d => d.week === week)?.correctPicks || 0;
+                                        const numGames = allWeeks.find(w => w.week === week)?.games.length || 0;
+                                        const correctPercentage = numGames > 0 ? (correctPicks / numGames) * 100 : 0;
+                                        displayValue = `${correctPercentage.toFixed(1)}%`;
+                                        break;
+                                    case 'absolute':
+                                    default:
+                                        displayValue = confidenceResults[player].pointsPerWeek.find(d => d.week === week)?.points || 0;
+                                        break;
+                                }
+                                return React.createElement("td", { key: player, className: "px-4 py-3 text-center text-slate-300" }, displayValue)
+                            })
                         )
                     ))
                 )
@@ -244,6 +348,11 @@ function CumulativePointsChart({ confidenceResults, selectedWeek }) {
     const x = e.clientX - svgRect.left;
     const y = e.clientY - svgRect.top;
 
+    const scaleX = chartWidth / svgRect.width;
+    const scaleY = chartHeight / svgRect.height;
+    const transformedX = x * scaleX;
+    const transformedY = y * scaleY;
+
     let closestPoint = null;
     let minDistance = Infinity;
 
@@ -252,7 +361,7 @@ function CumulativePointsChart({ confidenceResults, selectedWeek }) {
         filteredConfidenceResults[player].pointsPerWeek.forEach(d => {
           const pointX = xScale(d.week);
           const pointY = yScale(d.relativePoints);
-          const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+          const distance = Math.sqrt(Math.pow(transformedX - pointX, 2) + Math.pow(transformedY - pointY, 2));
 
           if (distance < minDistance && distance < 20) {
             minDistance = distance;
@@ -272,7 +381,12 @@ function CumulativePointsChart({ confidenceResults, selectedWeek }) {
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
       React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Cumulative Points vs. Leader"),
-      React.createElement("svg", { width: chartWidth, height: chartHeight, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave },
+      React.createElement("svg", {
+        viewBox: `0 0 ${chartWidth} ${chartHeight}`,
+        className: "w-full h-auto",
+        onMouseMove: handleMouseMove,
+        onMouseLeave: handleMouseLeave
+      },
         // X-axis
         React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
         weeks.map(week => (
@@ -380,71 +494,114 @@ function CumulativePointsTable({ confidenceResults }) {
     );
 }
 
-function GamesOfTheWeekPointsChart({ confidenceResults }) {
-    const players = Object.keys(confidenceResults).sort((a, b) => confidenceResults[b].gotwPoints - confidenceResults[a].gotwPoints);
-    const playerGotwPoints = players.map(player => confidenceResults[player].gotwPoints);
-  const maxPoints = Math.max(1, ...playerGotwPoints);
+function GamesOfTheWeekPointsChart({ confidenceResults, mockPicks, weeks, gamesOfTheWeek, includeLiveGames, gotwDisplayMode, setGotwDisplayMode }) {
+    const players = Object.keys(confidenceResults);
 
-  const chartWidth = 800;
-  const chartHeight = 400;
-  const padding = 50;
+    const chartData = React.useMemo(() => {
+        let data = players.map(player => {
+            let value;
+            switch (gotwDisplayMode) {
+                case 'points_percentage':
+                    const possiblePoints = gamesOfTheWeek.reduce((acc, gameId) => {
+                        const pick = mockPicks[player]?.find(p => p.gameId === gameId);
+                        return acc + (pick ? pick.confidence + 5 : 0);
+                    }, 0);
+                    value = possiblePoints > 0 ? (confidenceResults[player].gotwPoints / possiblePoints) * 100 : 0;
+                    break;
+                case 'correct_percentage':
+                    const playedGames = weeks.flatMap(w => w.games).filter(g => gamesOfTheWeek.includes(g.id) && (g.status === 'final' || g.status === 'post' || (includeLiveGames && (g.status === 'in' || g.status === 'live'))));
+                    const correctPicks = playedGames.filter(game => {
+                        const pick = mockPicks[player]?.find(p => p.gameId === game.id);
+                        if (!pick) return false;
+                        const pickAbbreviation = teamAbbreviations[pick.pick] || pick.pick;
+                        return pickAbbreviation === game.winner;
+                    }).length;
+                    value = playedGames.length > 0 ? (correctPicks / playedGames.length) * 100 : 0;
+                    break;
+                case 'absolute':
+                default:
+                    value = confidenceResults[player].gotwPoints;
+                    break;
+            }
+            return { player, value };
+        });
 
-  const xScale = (index) => padding + index * (chartWidth - 2 * padding) / (players.length - 1);
-  const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+        // Sort data
+        data.sort((a, b) => b.value - a.value);
+        return data;
 
-  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+    }, [confidenceResults, mockPicks, weeks, gamesOfTheWeek, includeLiveGames, gotwDisplayMode, players]);
 
-  return (
-    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
-      React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "Games of the Week Points"),
-      React.createElement("svg", { width: chartWidth, height: chartHeight },
-        // X-axis
-        React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
-        players.map((player, index) => (
-          React.createElement("text", { key: player, x: xScale(index), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, player)
-        )),
 
-        // Y-axis
-        React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
-        Array.from({ length: 5 }).map((_, i) => {
-          const points = Math.round(maxPoints / 4 * i);
-          if (i === 4 && playerGotwPoints.length > 0 && points === playerGotwPoints[0]) {
-            return null;
-          }
-          return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, points);
-        }),
+    const maxPoints = gotwDisplayMode === 'absolute' ? Math.max(1, ...chartData.map(d => d.value)) : 100;
 
-        // Bars
-        players.map((player, index) => {
-          const points = confidenceResults[player].gotwPoints;
-          const barWidth = (chartWidth - 2 * padding) / players.length / 2;
-          const barX = xScale(index) - barWidth / 2;
-          const barHeight = chartHeight - padding - yScale(points);
-          const barY = yScale(points);
+    const chartWidth = 800;
+    const chartHeight = 250;
+    const padding = 50;
 
-          return (
-            React.createElement("g", { key: player },
-              React.createElement("rect", {
-                x: barX,
-                y: barY,
-                width: barWidth,
-                height: barHeight,
-                fill: colors[index % colors.length],
-                rx: 4 // rounded corners
-              }),
-              React.createElement("text", {
-                x: barX + barWidth / 2,
-                y: barY - 5,
-                fill: "#fff",
-                textAnchor: "middle",
-                fontSize: "12px"
-              }, points)
+    const xScale = (index) => padding + index * (chartWidth - 2 * padding) / (chartData.length - 1);
+    const yScale = (points) => chartHeight - padding - (points / maxPoints) * (chartHeight - 2 * padding);
+
+    const colors = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+    return (
+        React.createElement("div", { className: "relative bg-slate-800/50 rounded-lg border border-slate-700 p-6 mt-6" },
+            React.createElement("button", {
+                onClick: () => {
+                  const modes = ['absolute', 'points_percentage', 'correct_percentage'];
+                  const nextIndex = (modes.indexOf(gotwDisplayMode) + 1) % modes.length;
+                  setGotwDisplayMode(modes[nextIndex]);
+                },
+                className: "absolute top-4 right-4 px-3 py-1 text-xs rounded-md font-medium transition-colors bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+            }, `View: ${gotwDisplayMode.replace('_', ' ')}`),
+            React.createElement("h2", { className: "text-xl font-bold text-white mb-4" }, "GotW Points"),
+            React.createElement("svg", {
+                viewBox: `0 0 ${chartWidth} ${chartHeight}`,
+                className: "w-full h-auto"
+            },
+                // X-axis
+                React.createElement("line", { x1: padding, y1: chartHeight - padding, x2: chartWidth - padding, y2: chartHeight - padding, stroke: "#64748b" }),
+                chartData.map(({ player }, index) => (
+                    React.createElement("text", { key: player, x: xScale(index), y: chartHeight - padding + 20, fill: "#94a3b8", textAnchor: "middle" }, player)
+                )),
+
+                // Y-axis
+                /* React.createElement("line", { x1: padding, y1: padding, x2: padding, y2: chartHeight - padding, stroke: "#64748b" }),
+                Array.from({ length: 5 }).map((_, i) => {
+                    const points = Math.round(maxPoints / 4 * i);
+                    return React.createElement("text", { key: i, x: padding - 10, y: yScale(points), fill: "#94a3b8", textAnchor: "end" }, `${points}${gotwDisplayMode !== 'absolute' ? '%' : ''}`);
+                }), */
+
+                // Bars
+                chartData.map(({ player, value }, index) => {
+                    const barWidth = (chartWidth - 2 * padding) / chartData.length / 2;
+                    const barX = xScale(index) - barWidth / 2;
+                    const barHeight = chartHeight - padding - yScale(value);
+                    const barY = yScale(value);
+
+                    return (
+                        React.createElement("g", { key: player },
+                            React.createElement("rect", {
+                                x: barX,
+                                y: barY,
+                                width: barWidth,
+                                height: barHeight,
+                                fill: colors[index % colors.length],
+                                rx: 4 // rounded corners
+                            }),
+                            React.createElement("text", {
+                                x: barX + barWidth / 2,
+                                y: barY - 5,
+                                fill: "#fff",
+                                textAnchor: "middle",
+                                fontSize: "12px"
+                            }, gotwDisplayMode === 'absolute' ? value : `${value.toFixed(1)}%`)
+                        )
+                    );
+                })
             )
-          );
-        })
-      )
-    )
-  );
+        )
+    );
 }
 
 function GamesOfTheWeekPointsTable({ mockPicks, weeks, gamesOfTheWeek, includeLiveGames }) {
@@ -458,7 +615,7 @@ function GamesOfTheWeekPointsTable({ mockPicks, weeks, gamesOfTheWeek, includeLi
 
     return (
         React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mt-6" },
-            React.createElement("h2", { className: "text-xl font-bold text-white mb-4 p-6" }, "Games of the Week Details"),
+            React.createElement("h2", { className: "text-xl font-bold text-white mb-4 p-6" }, "GotW Points Details"),
             React.createElement("table", { className: "w-full" },
                 React.createElement("thead", null,
                     React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
@@ -593,7 +750,7 @@ function OddsTable({ weeks, selectedWeek }) {
 
   return (
     React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
-      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Odds for Week ${selectedWeek}`),
+      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Win Probs. for Week ${selectedWeek}`),
       React.createElement("table", { className: "w-full" },
         React.createElement("thead", null,
           React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
@@ -660,7 +817,9 @@ function NFLScoresTracker() {
   const [playerSortConfig, setPlayerSortConfig] = useState({ key: null, direction: 'ascending' });
   const [showLogos, setShowLogos] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeChartTab, setActiveChartTab] = useState('points-per-week');
+  const [activeChartTab, setActiveChartTab] = useState('cumulative-points');
+  const [pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode] = useState('absolute');
+  const [gotwDisplayMode, setGotwDisplayMode] = useState('absolute');
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -899,13 +1058,15 @@ function NFLScoresTracker() {
     const results = {};
 
     Object.keys(mockPicks).forEach(player => {
-      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0, gotwPoints: 0, pointsLost: 0 };
+      results[player] = { total: 0, weekly: 0, correct: 0, possible: 0, details: [], pointsPerWeek: [], correctPicksPerWeek: [], remainingPossible: 0, totalConfidenceFromPlayedGames: 0, gotwPoints: 0, pointsLost: 0 };
     });
 
     weeks.forEach(weekData => {
       let weeklyPoints = {};
+      let weeklyCorrectPicks = {};
       Object.keys(mockPicks).forEach(player => {
         weeklyPoints[player] = 0;
+        weeklyCorrectPicks[player] = 0;
       });
 
       weekData.games.forEach(game => {
@@ -955,6 +1116,7 @@ function NFLScoresTracker() {
               results[player].weekly += confidence;
             }
             weeklyPoints[player] += confidence;
+            weeklyCorrectPicks[player]++;
             results[player].correct++;
             if (gamesOfTheWeek.includes(game.id)) {
               results[player].gotwPoints += confidence;
@@ -983,6 +1145,7 @@ function NFLScoresTracker() {
           : 0;
         const currentCumulativePoints = previousCumulativePoints + weeklyPoints[player];
         results[player].pointsPerWeek.push({ week: weekData.week, points: weeklyPoints[player], cumulativePoints: currentCumulativePoints });
+        results[player].correctPicksPerWeek.push({ week: weekData.week, correctPicks: weeklyCorrectPicks[player] });
       });
 
       // Calculate points relative to leader for the current week
@@ -1177,7 +1340,7 @@ function NFLScoresTracker() {
                   : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
               }`
             },
-              "Odds"
+              "Win Probs."
             ),
             React.createElement("button", {
               onClick: () => setActiveTab('leaderboard'),
@@ -1209,34 +1372,42 @@ function NFLScoresTracker() {
           React.createElement("div", null,
             React.createElement("div", { className: "flex gap-2 mb-4" },
               React.createElement("button", {
-                onClick: () => setActiveChartTab('points-per-week'),
-                className: `px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeChartTab === 'points-per-week' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-                }`
-              }, "Points per Week"),
-              React.createElement("button", {
                 onClick: () => setActiveChartTab('cumulative-points'),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors ${
                   activeChartTab === 'cumulative-points' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
                 }`
               }, "Cumulative Points vs. Leader"),
               React.createElement("button", {
+                onClick: () => setActiveChartTab('points-per-week'),
+                className: `px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeChartTab === 'points-per-week' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                }`
+              }, "Points per Week"),
+              React.createElement("button", {
                 onClick: () => setActiveChartTab('gotw-points'),
                 className: `px-4 py-2 rounded-lg font-medium transition-colors ${
                   activeChartTab === 'gotw-points' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
                 }`
-              }, "GOTW Points")
+              }, "GotW Points")
             ),
             activeChartTab === 'points-per-week' && React.createElement("div", null,
-              React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
-              React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults })
+              React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode: setPointsPerWeekDisplayMode }),
+              React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode })
             ),
             activeChartTab === 'cumulative-points' && React.createElement("div", null,
               React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
               React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
             ),
             activeChartTab === 'gotw-points' && React.createElement("div", null,
-              React.createElement(GamesOfTheWeekPointsChart, { confidenceResults: confidenceResults }),
+              React.createElement(GamesOfTheWeekPointsChart, { 
+                confidenceResults: confidenceResults,
+                mockPicks: mockPicks,
+                weeks: weeks,
+                gamesOfTheWeek: gamesOfTheWeek,
+                includeLiveGames: includeLiveGames,
+                gotwDisplayMode: gotwDisplayMode,
+                setGotwDisplayMode: setGotwDisplayMode
+              }),
               React.createElement(GamesOfTheWeekPointsTable, { mockPicks: mockPicks, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, includeLiveGames: includeLiveGames })
             )
           )
