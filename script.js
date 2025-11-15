@@ -646,6 +646,118 @@ function GamesOfTheWeekPointsTable({ mockPicks, weeks, gamesOfTheWeek, includeLi
     );
 }
 
+function ConfidencePicksSummaryTable({ games }) {
+  const [sortConfig, setSortConfig] = useState({ key: 'aggConfidence', direction: 'ascending' });
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === 'ascending' ? ' \u25B2' : ' \u25BC';
+    }
+    return null;
+  };
+
+  const summaryGames = React.useMemo(() => {
+    const validGames = games.filter(game => game.aggConfidence !== Infinity);
+    
+    if (sortConfig.key !== null) {
+        validGames.sort((a, b) => {
+            let aValue = a[sortConfig.key];
+            let bValue = b[sortConfig.key];
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+    
+    return validGames;
+  }, [games, sortConfig]);
+
+  if (summaryGames.length === 0) {
+    return null;
+  }
+
+  return (
+    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden mb-6" },
+      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, "Confidence Picks Summary"),
+      React.createElement("div", { className: "overflow-x-auto" },
+        React.createElement("table", { className: "w-full" },
+          React.createElement("thead", null,
+            React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+              React.createElement("th", { className: "px-4 py-3 text-center text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('aggConfidence') }, "Agg Pick", getSortIndicator('aggConfidence')),
+              React.createElement("th", { className: "px-4 py-3 text-center text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiConfidence') }, "FPI Pick", getSortIndicator('fpiConfidence')),
+              React.createElement("th", { className: "px-4 py-3 text-center text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlConfidence') }, "ML Pick", getSortIndicator('mlConfidence'))
+            )
+          ),
+          React.createElement("tbody", null,
+            summaryGames.map(game => {
+              const aggPickWP = game.aggPick === game.away ? game.aggAwayWP : game.aggHomeWP;
+              const fpiPickWP = game.fpiPick === game.away ? game.awayWinProbability : game.homeWinProbability;
+              const mlPickWP = game.mlPick === game.away ? game.awayML_WP : game.homeML_WP;
+
+              return (
+                React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                  React.createElement("td", { className: "px-4 py-3 text-white" },
+                    React.createElement("div", { className: "flex items-center justify-center gap-4" },
+                      React.createElement("span", { className: "font-bold text-lg" }, game.aggConfidence),
+                      React.createElement("div", { className: "flex flex-col items-center text-center" },
+                        React.createElement("img", {
+                          src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.aggPick.toLowerCase()}.png`,
+                          alt: game.aggPick,
+                          className: "w-8 h-8 mx-auto"
+                        }),
+                        React.createElement("span", { className: "text-xs text-slate-400 mt-1" }, aggPickWP ? `${aggPickWP.toFixed(1)}%` : "N/A")
+                      )
+                    )
+                  ),
+                  React.createElement("td", { className: "px-4 py-3 text-white" },
+                    React.createElement("div", { className: "flex items-center justify-center gap-4" },
+                      React.createElement("span", { className: "font-bold text-lg" }, game.fpiConfidence === Infinity ? "N/A" : game.fpiConfidence),
+                      React.createElement("div", { className: "flex flex-col items-center text-center" },
+                        React.createElement("img", {
+                          src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.fpiPick.toLowerCase()}.png`,
+                          alt: game.fpiPick,
+                          className: "w-8 h-8 mx-auto"
+                        }),
+                        React.createElement("span", { className: "text-xs text-slate-400 mt-1" }, fpiPickWP ? `${fpiPickWP.toFixed(1)}%` : "N/A")
+                      )
+                    )
+                  ),
+                  React.createElement("td", { className: "px-4 py-3 text-white" },
+                    React.createElement("div", { className: "flex items-center justify-center gap-4" },
+                      React.createElement("span", { className: "font-bold text-lg" }, game.mlConfidence === Infinity ? "N/A" : game.mlConfidence),
+                      React.createElement("div", { className: "flex flex-col items-center text-center" },
+                        React.createElement("img", {
+                          src: `https://a.espncdn.com/i/teamlogos/nfl/500/${game.mlPick.toLowerCase()}.png`,
+                          alt: game.mlPick,
+                          className: "w-8 h-8 mx-auto"
+                        }),
+                        React.createElement("span", { className: "text-xs text-slate-400 mt-1" }, mlPickWP ? `${(mlPickWP * 100).toFixed(1)}%` : "N/A")
+                      )
+                    )
+                  )
+                )
+              )
+            })
+          )
+        )
+      )
+    )
+  );
+}
+
 function OddsTable({ weeks, selectedWeek }) {
   const [sortConfig, setSortConfig] = useState({ key: 'fpiConfidence', direction: 'ascending' });
 
@@ -665,14 +777,41 @@ function OddsTable({ weeks, selectedWeek }) {
       const absDiff = (game.homeWinProbability && game.awayWinProbability)
         ? Math.abs(game.homeWinProbability - game.awayWinProbability)
         : -1;
-      const awayML_WP = convertOddsToProbability(game.awayMoneyLine);
-      const homeML_WP = convertOddsToProbability(game.homeMoneyLine);
+      
+      const rawAwayML_WP = convertOddsToProbability(game.awayMoneyLine);
+      const rawHomeML_WP = convertOddsToProbability(game.homeMoneyLine);
+
+      let awayML_WP = null;
+      let homeML_WP = null;
+
+      if (rawAwayML_WP !== null && rawHomeML_WP !== null) {
+        const totalProb = rawAwayML_WP + rawHomeML_WP;
+        if (totalProb > 0) {
+          awayML_WP = rawAwayML_WP / totalProb;
+          homeML_WP = rawHomeML_WP / totalProb;
+        } else {
+          awayML_WP = rawAwayML_WP;
+          homeML_WP = rawHomeML_WP;
+        }
+      }
+      
       const absMlDiff = (awayML_WP && homeML_WP) ? Math.abs(awayML_WP - homeML_WP) : -1;
       
       const fpiPick = game.homeWinProbability > game.awayWinProbability ? game.home : game.away;
-      const mlPick = awayML_WP < homeML_WP ? game.home : game.away;
+      const mlPick = rawAwayML_WP < rawHomeML_WP ? game.home : game.away;
 
-      return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff, fpiPick, mlPick };
+      // Aggregate calculations
+      const aggAwayScore = (game.awayWinProbability || 0) + ((awayML_WP || 0) * 100);
+      const aggHomeScore = (game.homeWinProbability || 0) + ((homeML_WP || 0) * 100);
+      const totalScore = aggAwayScore + aggHomeScore;
+      
+      const aggAwayWP = totalScore > 0 ? (aggAwayScore / totalScore) * 100 : null;
+      const aggHomeWP = totalScore > 0 ? (aggHomeScore / totalScore) * 100 : null;
+      const aggAbsDiff = (aggAwayWP !== null && aggHomeWP !== null) ? Math.abs(aggAwayWP - aggHomeWP) : -1;
+      const aggPick = aggAwayWP > aggHomeWP ? game.away : game.home;
+
+
+      return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff, fpiPick, mlPick, aggAwayWP, aggHomeWP, aggAbsDiff, aggPick };
     });
 
     // Create ranks for fpiConfidence
@@ -689,10 +828,18 @@ function OddsTable({ weeks, selectedWeek }) {
       mlRanks[game.id] = game.absMlDiff === -1 ? Infinity : index + 1;
     });
 
+    // Create ranks for aggConfidence
+    const rankedByAgg = [...sortableGames].sort((a, b) => a.aggAbsDiff - b.aggAbsDiff);
+    const aggRanks = {};
+    rankedByAgg.forEach((game, index) => {
+      aggRanks[game.id] = game.aggAbsDiff === -1 ? Infinity : index + 1;
+    });
+
     sortableGames = sortableGames.map(game => ({
       ...game,
       fpiConfidence: fpiRanks[game.id],
-      mlConfidence: mlRanks[game.id]
+      mlConfidence: mlRanks[game.id],
+      aggConfidence: aggRanks[game.id]
     }));
 
 
@@ -734,57 +881,78 @@ function OddsTable({ weeks, selectedWeek }) {
   };
 
   return (
-    React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
-      React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Win Probs. for Week ${selectedWeek}`),
-      React.createElement("table", { className: "w-full" },
-        React.createElement("thead", null,
-          React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('away') }, "Game", getSortIndicator('away')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayWinProbability') }, "Away WP", getSortIndicator('awayWinProbability')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeWinProbability') }, "Home WP", getSortIndicator('homeWinProbability')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absDiff') }, "Abs Diff", getSortIndicator('absDiff')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiConfidence') }, "FPI Conf.", getSortIndicator('fpiConfidence')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiPick') }, "FPI Pick", getSortIndicator('fpiPick')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayMoneyLine') }, "Away ML", getSortIndicator('awayMoneyLine')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeMoneyLine') }, "Home ML", getSortIndicator('homeMoneyLine')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayML_WP') }, "Away ML WP", getSortIndicator('awayML_WP')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeML_WP') }, "Home ML WP", getSortIndicator('homeML_WP')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absMlDiff') }, "Abs ML Diff", getSortIndicator('absMlDiff')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlConfidence') }, "ML Conf.", getSortIndicator('mlConfidence')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlPick') }, "ML Pick", getSortIndicator('mlPick'))
-          )
-        ),
-        React.createElement("tbody", null,
-          sortedGames.map(game => {
-            const absDiffDisplay = game.absDiff !== -1 ? game.absDiff.toFixed(1) + '%' : "N/A";
-            const absMlDiffDisplay = game.absMlDiff !== -1 ? `${(game.absMlDiff * 100).toFixed(1)}%` : "N/A";
-
-            return (
-              React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
-                React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
-                React.createElement("td", { className: "px-4 py-3 text-white" },
-                  game.awayWinProbability ? `${game.awayWinProbability.toFixed(1)}%` : "N/A"
-                ),
-                React.createElement("td", { className: "px-4 py-3 text-white" },
-                  game.homeWinProbability ? `${game.homeWinProbability.toFixed(1)}%` : "N/A"
-                ),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, absDiffDisplay),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiConfidence === Infinity ? "N/A" : game.fpiConfidence),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiPick || "N/A"),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.awayMoneyLine || "N/A"),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.homeMoneyLine || "N/A"),
-                React.createElement("td", { className: "px-4 py-3 text-white" },
-                  game.awayML_WP ? `${(game.awayML_WP * 100).toFixed(1)}%` : "N/A"
-                ),
-                React.createElement("td", { className: "px-4 py-3 text-white" },
-                  game.homeML_WP ? `${(game.homeML_WP * 100).toFixed(1)}%` : "N/A"
-                ),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, absMlDiffDisplay),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlConfidence === Infinity ? "N/A" : game.mlConfidence),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlPick || "N/A")
+    React.createElement(React.Fragment, null,
+      React.createElement(ConfidencePicksSummaryTable, { games: sortedGames }),
+      React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
+        React.createElement("h2", { className: "text-xl font-bold text-white p-6" }, `Full Data for Week ${selectedWeek}`),
+        React.createElement("div", { className: "overflow-x-auto" },
+          React.createElement("table", { className: "w-full" },
+            React.createElement("thead", null,
+              React.createElement("tr", { className: "bg-slate-700/50 border-b border-slate-700" },
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('away') }, "Game", getSortIndicator('away')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayWinProbability') }, "Away FPI WP", getSortIndicator('awayWinProbability')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeWinProbability') }, "Home FPI WP", getSortIndicator('homeWinProbability')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absDiff') }, "Abs FPI Diff", getSortIndicator('absDiff')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiConfidence') }, "FPI Conf.", getSortIndicator('fpiConfidence')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiPick') }, "FPI Pick", getSortIndicator('fpiPick')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayMoneyLine') }, "Away ML", getSortIndicator('awayMoneyLine')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeMoneyLine') }, "Home ML", getSortIndicator('homeMoneyLine')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayML_WP') }, "Away ML WP", getSortIndicator('awayML_WP')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeML_WP') }, "Home ML WP", getSortIndicator('homeML_WP')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absMlDiff') }, "Abs ML Diff", getSortIndicator('absMlDiff')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlConfidence') }, "ML Conf.", getSortIndicator('mlConfidence')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlPick') }, "ML Pick", getSortIndicator('mlPick')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('aggAwayWP') }, "Agg Away WP", getSortIndicator('aggAwayWP')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('aggHomeWP') }, "Agg Home WP", getSortIndicator('aggHomeWP')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('aggAbsDiff') }, "Agg Abs Diff", getSortIndicator('aggAbsDiff')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('aggConfidence') }, "Agg Conf.", getSortIndicator('aggConfidence')),
+                React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('aggPick') }, "Agg Pick", getSortIndicator('aggPick'))
               )
+            ),
+            React.createElement("tbody", null,
+              sortedGames.map(game => {
+                const absDiffDisplay = game.absDiff !== -1 ? game.absDiff.toFixed(1) + '%' : "N/A";
+                const absMlDiffDisplay = game.absMlDiff !== -1 ? `${(game.absMlDiff * 100).toFixed(1)}%` : "N/A";
+
+                return (
+                  React.createElement("tr", { key: game.id, className: "border-b border-slate-700/50 hover:bg-slate-700/20" },
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, `${game.away} @ ${game.home}`),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.awayWinProbability ? `${game.awayWinProbability.toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.homeWinProbability ? `${game.homeWinProbability.toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, absDiffDisplay),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiConfidence === Infinity ? "N/A" : game.fpiConfidence),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiPick || "N/A"),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.awayMoneyLine || "N/A"),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.homeMoneyLine || "N/A"),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.awayML_WP ? `${(game.awayML_WP * 100).toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.homeML_WP ? `${(game.homeML_WP * 100).toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, absMlDiffDisplay),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlConfidence === Infinity ? "N/A" : game.mlConfidence),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlPick || "N/A"),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.aggAwayWP ? `${game.aggAwayWP.toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.aggHomeWP ? `${game.aggHomeWP.toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" },
+                      game.aggAbsDiff !== -1 ? `${game.aggAbsDiff.toFixed(1)}%` : "N/A"
+                    ),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.aggConfidence === Infinity ? "N/A" : game.aggConfidence),
+                    React.createElement("td", { className: "px-4 py-3 text-white" }, game.aggPick || "N/A")
+                  )
+                )
+              })
             )
-          })
+          )
         )
       )
     )
