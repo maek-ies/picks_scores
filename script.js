@@ -719,7 +719,8 @@ function ConfidencePicksSummaryTable({ games, showDisagreement }) {
                           className: "w-8 h-8 mx-auto"
                         }),
                         React.createElement("div", { className: "text-xs text-slate-400 mt-1" }, aggPickWP ? `${aggPickWP.toFixed(1)}%` : "N/A"),
-                        showDisagreement && game.modelDisagreement !== null && React.createElement("div", { className: "text-xs text-slate-400 mt-1" }, `-(dis: ${game.modelDisagreement.toFixed(1)}%)`)
+                        showDisagreement === 'wp' && game.modelDisagreement !== null && React.createElement("div", { className: "text-xs text-slate-400 mt-1" }, `(${game.modelDisagreement.toFixed(1)}%)`),
+                        showDisagreement === 'confidence' && game.confidenceDisagreement !== null && React.createElement("div", { className: "text-xs text-slate-400 mt-1" }, `(${game.confidenceDisagreement})`)
                       )
                     )
                   ),
@@ -853,7 +854,13 @@ function OddsTable({ weeks, selectedWeek, showDisagreement, setShowDisagreement 
       if (game.homeWinProbability !== null && game.homeML_WP !== null) {
         modelDisagreement = Math.abs(game.homeWinProbability - (game.homeML_WP * 100));
       }
-      return { ...game, modelDisagreement };
+
+      let confidenceDisagreement = null;
+      if (isFinite(game.fpiConfidence) && isFinite(game.mlConfidence)) {
+        confidenceDisagreement = Math.abs(game.fpiConfidence - game.mlConfidence);
+      }
+
+      return { ...game, modelDisagreement, confidenceDisagreement };
     });
 
 
@@ -899,14 +906,18 @@ function OddsTable({ weeks, selectedWeek, showDisagreement, setShowDisagreement 
       React.createElement(ConfidencePicksSummaryTable, { games: sortedGames, showDisagreement: showDisagreement }),
       React.createElement("div", { className: "flex justify-end mb-2" },
         React.createElement("button", {
-          onClick: () => setShowDisagreement(!showDisagreement),
+          onClick: () => {
+            const modes = ['hidden', 'wp', 'confidence'];
+            const nextIndex = (modes.indexOf(showDisagreement) + 1) % modes.length;
+            setShowDisagreement(modes[nextIndex]);
+          },
           className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
-            showDisagreement
+            showDisagreement !== 'hidden'
               ? 'bg-blue-600 hover:bg-blue-700 text-white'
               : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700'
           }`
         },
-          showDisagreement ? 'Hide Disagreement' : 'Show Disagreement'
+          showDisagreement === 'hidden' ? 'Show Disagreement' : `Disagreement: ${showDisagreement.toUpperCase()}`
         )
       ),
       React.createElement("div", { className: "bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden" },
@@ -1003,7 +1014,7 @@ function NFLScoresTracker() {
   const [activeChartTab, setActiveChartTab] = useState('cumulative-points');
   const [pointsPerWeekDisplayMode, setPointsPerWeekDisplayMode] = useState('absolute');
   const [gotwDisplayMode, setGotwDisplayMode] = useState('absolute');
-  const [showDisagreement, setShowDisagreement] = useState(false);
+  const [showDisagreement, setShowDisagreement] = useState('hidden'); // 'hidden', 'wp', 'confidence'
 
   const transformEspnData = (data) => {
     return data.events.map(event => {
@@ -1494,7 +1505,7 @@ function NFLScoresTracker() {
               )
             )
           ),
-          React.createElement("div", { className: "flex gap-2 mt-1" },
+          React.createElement("div", { className: "flex gap-2 mt-0" },
             React.createElement("button", {
               onClick: () => setActiveTab('week-overview'),
               className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -1574,7 +1585,7 @@ function NFLScoresTracker() {
                 }`
               }, "GotW Points")
             ),
-            activeChartTab === 'points-per-week' && React.createElement("div", { className: "relative chart-wrapper" },
+            activeChartTab === 'points-per-week' && React.createElement("div", { className: "relative chart-wrapper mt-1" },
               React.createElement("div", { className: "absolute top-4 right-4 z-10" },
                 React.createElement("button", {
                   onClick: () => {
@@ -1592,7 +1603,7 @@ function NFLScoresTracker() {
               React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
               React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
             ),
-            activeChartTab === 'gotw-points' && React.createElement("div", { className: "relative chart-wrapper" },
+            activeChartTab === 'gotw-points' && React.createElement("div", { className: "relative chart-wrapper mt-1" },
               React.createElement("div", { className: "absolute top-4 right-4 z-10" },
                 React.createElement("button", {
                   onClick: () => {
