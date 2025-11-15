@@ -668,7 +668,11 @@ function OddsTable({ weeks, selectedWeek }) {
       const awayML_WP = convertOddsToProbability(game.awayMoneyLine);
       const homeML_WP = convertOddsToProbability(game.homeMoneyLine);
       const absMlDiff = (awayML_WP && homeML_WP) ? Math.abs(awayML_WP - homeML_WP) : -1;
-      return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff };
+      
+      const fpiPick = game.homeWinProbability > game.awayWinProbability ? game.home : game.away;
+      const mlPick = awayML_WP < homeML_WP ? game.home : game.away;
+
+      return { ...game, absDiff, awayML_WP, homeML_WP, absMlDiff, fpiPick, mlPick };
     });
 
     // Create ranks for fpiConfidence
@@ -740,12 +744,14 @@ function OddsTable({ weeks, selectedWeek }) {
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeWinProbability') }, "Home WP", getSortIndicator('homeWinProbability')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absDiff') }, "Abs Diff", getSortIndicator('absDiff')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiConfidence') }, "FPI Conf.", getSortIndicator('fpiConfidence')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('fpiPick') }, "FPI Pick", getSortIndicator('fpiPick')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayMoneyLine') }, "Away ML", getSortIndicator('awayMoneyLine')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeMoneyLine') }, "Home ML", getSortIndicator('homeMoneyLine')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('awayML_WP') }, "Away ML WP", getSortIndicator('awayML_WP')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('homeML_WP') }, "Home ML WP", getSortIndicator('homeML_WP')),
             React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('absMlDiff') }, "Abs ML Diff", getSortIndicator('absMlDiff')),
-            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlConfidence') }, "ML Conf.", getSortIndicator('mlConfidence'))
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlConfidence') }, "ML Conf.", getSortIndicator('mlConfidence')),
+            React.createElement("th", { className: "px-4 py-3 text-left text-white font-semibold text-sm cursor-pointer", onClick: () => requestSort('mlPick') }, "ML Pick", getSortIndicator('mlPick'))
           )
         ),
         React.createElement("tbody", null,
@@ -764,6 +770,7 @@ function OddsTable({ weeks, selectedWeek }) {
                 ),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, absDiffDisplay),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiConfidence === Infinity ? "N/A" : game.fpiConfidence),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.fpiPick || "N/A"),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, game.awayMoneyLine || "N/A"),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, game.homeMoneyLine || "N/A"),
                 React.createElement("td", { className: "px-4 py-3 text-white" },
@@ -773,7 +780,8 @@ function OddsTable({ weeks, selectedWeek }) {
                   game.homeML_WP ? `${(game.homeML_WP * 100).toFixed(1)}%` : "N/A"
                 ),
                 React.createElement("td", { className: "px-4 py-3 text-white" }, absMlDiffDisplay),
-                React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlConfidence === Infinity ? "N/A" : game.mlConfidence)
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlConfidence === Infinity ? "N/A" : game.mlConfidence),
+                React.createElement("td", { className: "px-4 py-3 text-white" }, game.mlPick || "N/A")
               )
             )
           })
@@ -1371,7 +1379,7 @@ function NFLScoresTracker() {
                 }`
               }, "GotW Points")
             ),
-            activeChartTab === 'points-per-week' && React.createElement("div", { className: "relative" },
+            activeChartTab === 'points-per-week' && React.createElement("div", { className: "relative chart-wrapper" },
               React.createElement("div", { className: "absolute top-4 right-4 z-10" },
                 React.createElement("button", {
                   onClick: () => {
@@ -1385,11 +1393,11 @@ function NFLScoresTracker() {
               React.createElement(WeeklyPointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode }),
               React.createElement(WeeklyPointsTable, { confidenceResults: confidenceResults, weeks: weeks, gamesOfTheWeek: gamesOfTheWeek, pointsPerWeekDisplayMode: pointsPerWeekDisplayMode })
             ),
-            activeChartTab === 'cumulative-points' && React.createElement("div", null,
+            activeChartTab === 'cumulative-points' && React.createElement("div", { className: "chart-wrapper" },
               React.createElement(CumulativePointsChart, { confidenceResults: confidenceResults, selectedWeek: selectedWeek }),
               React.createElement(CumulativePointsTable, { confidenceResults: confidenceResults })
             ),
-            activeChartTab === 'gotw-points' && React.createElement("div", { className: "relative" },
+            activeChartTab === 'gotw-points' && React.createElement("div", { className: "relative chart-wrapper" },
               React.createElement("div", { className: "absolute top-4 right-4 z-10" },
                 React.createElement("button", {
                   onClick: () => {
